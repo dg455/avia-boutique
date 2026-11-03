@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Démonstration — page carte</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/config.js"></script>
+</head>
+<body>
+  <main><div class="shell">
+    <div class="notice notice-demo" style="margin-top:24px">Démonstration. En réel, ce lien ouvre la page carte de l'émetteur : acceptation des conditions, affichage de la carte, ajout au portefeuille du téléphone.</div>
+    <h1>Ici s'ouvre votre carte</h1>
+    <p class="lead">Lien à usage unique. Dans la boutique réelle, cette page est servie par l'émetteur, pas par la boutique.</p>
+    <div class="card-visual ready-card" aria-hidden="true">
+      <div class="cv-top"><div class="cv-brand" id="b"></div><div class="cv-kind">Carte virtuelle</div></div>
+      <div class="cv-bottom"><div><div class="cv-amount" id="a"></div><div class="cv-holder" id="h"></div></div><div class="cv-note">•••• <span id="l4"></span></div></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ink" type="button" onclick="alert('Démonstration : en réel, la carte est poussée dans Google Wallet ou ajoutée dans Cartes sur iPhone.')">Ajouter au portefeuille</button>
+      <a class="btn btn-ghost" href="/">Retour à la boutique</a>
+    </div>
+  </div></main>
+  <script>
+    (function () {
+      var c = window.SHOP_CONFIG; var q = new URLSearchParams(location.search);
+      document.documentElement.style.setProperty("--accent", c.brand.accent);
+      document.getElementById("b").textContent = c.brand.name;
+      document.getElementById("a").textContent = (q.get("face") || "100") + " €";
+      document.getElementById("h").textContent = q.get("name") || "";
+      document.getElementById("l4").textContent = q.get("l4") || "0000";
+    })();
+  </script>
+</body>
+</html>

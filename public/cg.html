@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Conditions générales du porteur</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/config.js"></script>
+  <style>
+    .doc h2 { margin-top: 30px; }
+    .doc p, .doc li { font-size: 16px; }
+    .doc table { width: 100%; border-collapse: collapse; margin: 12px 0 4px; font-size: 15px; }
+    .doc th, .doc td { text-align: left; padding: 10px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+    .doc th { font-weight: 600; color: var(--muted); font-size: 14px; }
+    .doc td:last-child { text-align: right; white-space: nowrap; font-family: var(--font-num); font-weight: 700; }
+  </style>
+</head>
+<body>
+  <header class="topbar"><div class="shell"><a class="brand" href="/" id="brand-link"></a></div></header>
+  <main><div class="shell doc">
+    <h1>Conditions générales du porteur</h1>
+    <p class="lead">L'essentiel de ce qui s'applique à votre carte. Le contrat complet vous est présenté par l'émetteur au moment où vous ouvrez votre carte.</p>
+
+    <h2>La carte</h2>
+    <p>La carte est une carte prépayée virtuelle, émise par un établissement de monnaie électronique agréé, membre du réseau Mastercard. Elle est délivrée dans votre téléphone et utilisable dans les stations du réseau partenaire : carburant, boutique et lavage. Elle ne peut pas être rechargée.</p>
+
+    <h2>Qui peut l'obtenir</h2>
+    <ul>
+      <li>Une personne majeure, qui commande pour elle-même ou reçoit une carte commandée par son employeur, avec ses propres informations.</li>
+      <li>Une seule carte par personne et par période de 30 jours, contrôlée par le numéro de mobile et l'adresse e-mail.</li>
+      <li>Les informations demandées (prénom, nom, date de naissance, civilité, nationalité, e-mail, mobile) sont exigées par la réglementation pour la création de toute carte de paiement.</li>
+    </ul>
+
+    <h2>Validité et frais</h2>
+    <table>
+      <tr><th>Durée de validité</th><td>12 mois</td></tr>
+      <tr><th>Frais d'achat</th><td>0 €</td></tr>
+      <tr><th>Frais de création, prélevés sur le solde restant le dernier jour de validité (dans la limite de ce solde)</th><td>100 €</td></tr>
+      <tr><th>Remboursement vers le moyen de paiement d'origine</th><td>15 €</td></tr>
+      <tr><th>Contestation d'une transaction (chargeback)</th><td>25 €</td></tr>
+      <tr><th>Transaction refusée</th><td>0,20 €</td></tr>
+      <tr><th>Inactivité, par mois, après 12 mois consécutifs sans opération</th><td>2,50 €</td></tr>
+    </table>
+    <p class="small muted">Le solde non dépensé à la fin de la validité est donc consommé par les frais de création, dans la limite du solde restant.</p>
+
+    <h2>Ouvrir la carte</h2>
+    <p>Après le paiement, vous recevez un lien d'activation par SMS et par e-mail. Ce lien ne s'ouvre qu'une seule fois et a une durée de validité limitée. Il affiche votre carte et permet de l'ajouter au portefeuille de votre téléphone.</p>
+
+    <h2 id="donnees">Données personnelles</h2>
+    <p id="privacy"></p>
+    <p>Responsable de la boutique : <span id="op"></span>. L'émetteur de la carte traite vos données en qualité d'établissement agréé, pour la création de la carte, la lutte contre la fraude et le respect de ses obligations réglementaires.</p>
+
+    <h2>Service client</h2>
+    <p id="support"></p>
+    <div class="btn-row"><a class="btn btn-ghost" href="/">Retour à la boutique</a></div>
+  </div></main>
+  <script>
+    (function () {
+      var c = window.SHOP_CONFIG;
+      document.documentElement.style.setProperty("--accent", c.brand.accent);
+      document.getElementById("brand-link").innerHTML = c.brand.partnerLogo
+        ? '<img src="' + c.brand.partnerLogo + '" alt="' + c.brand.name + '">'
+        : '<span class="brand-name">' + c.brand.name + '</span><span class="brand-sub">Carte virtuelle</span>';
+      document.getElementById("privacy").textContent = c.legal.privacyNote;
+      document.getElementById("op").textContent = c.legal.operatorCompany + ", " + c.legal.operatorAddress + " (" + c.legal.operatorRegistration + ")";
+      document.getElementById("support").textContent = "Pour toute question sur votre carte : " + c.support.phone + ", " + c.support.phoneNote + ".";
+    })();
+  </script>
+</body>
+</html>

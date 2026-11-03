@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Accès réservé</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/config.js"></script>
+</head>
+<body>
+  <div class="gate">
+    <form class="gate-box" method="POST" action="/gate">
+      <a class="brand" id="gate-brand" href="/"></a>
+      <h1>Accès réservé</h1>
+      <p>Cette boutique est en cours de mise au point. Entrez le code qui vous a été communiqué.</p>
+      <div class="field">
+        <label for="code">Code d'accès</label>
+        <input class="input" id="code" name="code" type="password" autocomplete="off" autocapitalize="off" autofocus required>
+        <div class="field-error" id="gate-error">Code incorrect.</div>
+      </div>
+      <input type="hidden" name="next" id="next" value="/">
+      <div class="btn-row">
+        <button class="btn btn-ink" type="submit">Entrer</button>
+      </div>
+      <p class="small" style="margin-top:18px" id="gate-operator"></p>
+    </form>
+  </div>
+  <script>
+    (function () {
+      var c = window.SHOP_CONFIG;
+      document.documentElement.style.setProperty("--accent", c.brand.accent);
+      var b = document.getElementById("gate-brand");
+      b.innerHTML = c.brand.partnerLogo
+        ? '<img src="' + c.brand.partnerLogo + '" alt="' + c.brand.name + '"><span class="brand-sub">Carte virtuelle</span>'
+        : '<span class="brand-name">' + c.brand.name + '</span><span class="brand-sub">Carte virtuelle</span>';
+      document.getElementById("gate-operator").textContent = "Un service " + c.brand.operator + ".";
+      var q = new URLSearchParams(location.search);
+      if (q.get("err")) { document.getElementById("code").closest(".field").classList.add("has-error"); }
+      var n = q.get("next"); if (n && n.charAt(0) === "/") document.getElementById("next").value = n;
+    })();
+  </script>
+</body>
+</html>

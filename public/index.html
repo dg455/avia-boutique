@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Carte AVIA — carte carburant virtuelle</title>
+  <meta name="description" content="Achetez votre carte carburant AVIA et ajoutez-la à votre téléphone en moins d'une minute.">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/config.js"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="shell">
+    <a class="brand" href="#/" id="brand-link"></a>
+    <div class="topbar-right"><a href="#/entreprise" id="nav-business">Entreprises</a></div>
+  </div>
+</header>
+
+<main>
+  <div class="shell">
+
+    <!-- 1. Accueil -->
+    <section class="screen" id="screen-home" data-step="1">
+      <div class="card-visual" id="card-visual" aria-hidden="true">
+        <div class="cv-top">
+          <div class="cv-brand" id="cv-brand">AVIA</div>
+          <div class="cv-kind">Carte virtuelle</div>
+        </div>
+        <div class="cv-bottom">
+          <div>
+            <div class="cv-amount" id="cv-amount">100 €</div>
+            <div class="cv-holder" id="cv-holder">Votre nom</div>
+          </div>
+          <div class="cv-note" id="cv-note">Dans votre téléphone, sans application</div>
+        </div>
+      </div>
+
+      <h1 style="margin-top:26px">Le carburant AVIA, moins cher, dans votre téléphone.</h1>
+      <p class="lead" id="home-lead"></p>
+
+      <div class="choices" id="choices" role="group" aria-label="Montant de la carte"></div>
+
+      <div class="price-block">
+        <div class="price-line"><span class="pl-label">Vous recevez sur la carte</span><span class="pl-value" id="p-face">100 €</span></div>
+        <div class="price-line"><span class="pl-label">Frais d'achat</span><span class="pl-value">0 €</span></div>
+        <div class="price-line is-total"><span class="pl-label">Vous payez</span><span class="pl-value" id="p-price">96 €</span></div>
+      </div>
+
+      <div class="benefit" id="benefit"></div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-start">Acheter ma carte</button>
+      </div>
+
+      <div class="biz-entry" id="biz-entry">
+        <h2>Vous achetez pour vos salariés ?</h2>
+        <p>Commande groupée réglée par virement, cartes envoyées directement sur le téléphone de chaque salarié.</p>
+        <a class="link-btn" href="#/entreprise">Commander pour une entreprise</a>
+      </div>
+    </section>
+
+    <!-- 2. E-mail -->
+    <section class="screen" id="screen-email" data-step="2">
+      <button class="back" data-go="#/">‹ Retour</button>
+      <div class="steps" aria-hidden="true"></div>
+      <div class="steps-label">Étape 2 sur 4 : vos coordonnées</div>
+      <h1>Votre adresse e-mail</h1>
+      <p class="lead">Vous recevrez votre carte par SMS et par e-mail.</p>
+      <form id="form-email" novalidate>
+        <div class="field">
+          <label for="f-email">E-mail</label>
+          <input class="input" type="email" id="f-email" name="email" autocomplete="email" inputmode="email" required>
+          <div class="field-error">Entrez une adresse e-mail valide.</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" type="submit">Continuer</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- 2b. Client reconnu -->
+    <section class="screen" id="screen-known" data-step="2">
+      <button class="back" data-go="#/email">‹ Retour</button>
+      <div class="steps" aria-hidden="true"></div>
+      <div class="steps-label">Étape 2 sur 4 : vos coordonnées</div>
+      <h1 id="known-title">Content de vous revoir</h1>
+      <p class="lead">Nous avons déjà vos informations. Vérifiez-les, puis continuez.</p>
+      <div class="summary" id="known-summary"></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-known-ok">C'est bien moi, continuer</button>
+        <button class="btn btn-ghost" id="btn-known-edit">Modifier mes informations</button>
+      </div>
+    </section>
+
+    <!-- 3. Coordonnées -->
+    <section class="screen" id="screen-details" data-step="2">
+      <button class="back" data-go="#/email">‹ Retour</button>
+      <div class="steps" aria-hidden="true"></div>
+      <div class="steps-label">Étape 2 sur 4 : vos coordonnées</div>
+      <h1>Qui recevra la carte ?</h1>
+      <p class="lead">Ces informations sont exigées par l'émetteur pour créer votre carte. Elles doivent être les vôtres.</p>
+      <form id="form-details" novalidate>
+        <div class="row">
+          <div class="field">
+            <label for="f-first">Prénom</label>
+            <input class="input" id="f-first" name="first_name" autocomplete="given-name" required>
+            <div class="field-error">Indiquez votre prénom.</div>
+          </div>
+          <div class="field">
+            <label for="f-last">Nom</label>
+            <input class="input" id="f-last" name="last_name" autocomplete="family-name" required>
+            <div class="field-error">Indiquez votre nom.</div>
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-birth">Date de naissance</label>
+          <input class="input" type="date" id="f-birth" name="birth_date" autocomplete="bday" required>
+          <div class="field-error">Vous devez avoir 18 ans ou plus.</div>
+        </div>
+        <div class="field">
+          <label>Civilité</label>
+          <div class="segmented" id="seg-gender">
+            <label class="is-on"><input type="radio" name="gender" value="F" checked>Madame</label>
+            <label><input type="radio" name="gender" value="M">Monsieur</label>
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-nat">Nationalité</label>
+          <select class="input" id="f-nat" name="nationality" required></select>
+        </div>
+        <div class="field">
+          <label for="f-mobile">Téléphone mobile</label>
+          <div class="row row-phone">
+            <select class="input" id="f-dial" name="dialing_code" aria-label="Indicatif"></select>
+            <input class="input" type="tel" id="f-mobile" name="mobile" autocomplete="tel-national" inputmode="tel" placeholder="6 12 34 56 78" required>
+          </div>
+          <div class="hint">Le lien pour ouvrir votre carte arrive par SMS sur ce numéro.</div>
+          <div class="field-error">Entrez un numéro de mobile valide.</div>
+        </div>
+        <p class="small muted" id="privacy-note" style="margin-top:18px"></p>
+        <div class="btn-row">
+          <button class="btn btn-primary" type="submit">Continuer</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- 4. Récapitulatif -->
+    <section class="screen" id="screen-review" data-step="3">
+      <button class="back" data-go="#/details">‹ Retour</button>
+      <div class="steps" aria-hidden="true"></div>
+      <div class="steps-label">Étape 3 sur 4 : paiement</div>
+      <h1>Vérifiez votre commande</h1>
+      <div class="summary" id="review-order"></div>
+      <div class="summary" id="review-person"></div>
+      <label class="check">
+        <input type="checkbox" id="f-terms">
+        <span>J'accepte les <a href="#" id="terms-link" target="_blank" rel="noopener">conditions générales du porteur</a> et je confirme que la carte est pour moi.</span>
+      </label>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-pay" disabled>Payer <span id="btn-pay-amount">96 €</span></button>
+      </div>
+    </section>
+
+    <!-- 5. Paiement -->
+    <section class="screen" id="screen-pay" data-step="3">
+      <button class="back" data-go="#/review">‹ Retour</button>
+      <div class="steps" aria-hidden="true"></div>
+      <div class="steps-label">Étape 3 sur 4 : paiement</div>
+      <h1>Paiement</h1>
+      <div class="notice notice-demo" id="pay-demo-notice">Démonstration : aucun paiement n'est débité, aucune carte réelle n'est émise.</div>
+      <form id="form-pay" novalidate>
+        <div class="field">
+          <label for="f-cardnum">Numéro de carte bancaire</label>
+          <input class="input" id="f-cardnum" inputmode="numeric" autocomplete="cc-number" placeholder="4000 0000 0000 0000">
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="f-exp">Expiration</label>
+            <input class="input" id="f-exp" inputmode="numeric" autocomplete="cc-exp" placeholder="MM/AA">
+          </div>
+          <div class="field">
+            <label for="f-cvc">Cryptogramme</label>
+            <input class="input" id="f-cvc" inputmode="numeric" autocomplete="cc-csc" placeholder="123">
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" type="submit">Payer <span id="pay-amount">96 €</span></button>
+        </div>
+        <p class="small muted" style="margin-top:14px">Paiement sécurisé. Votre carte bancaire n'est débitée qu'une fois votre carte carburant créée et chargée.</p>
+      </form>
+    </section>
+
+    <!-- 6. Création -->
+    <section class="screen" id="screen-creating" data-step="4">
+      <div class="steps" aria-hidden="true"></div>
+      <div class="steps-label">Étape 4 sur 4 : votre carte</div>
+      <h1>Création de votre carte</h1>
+      <p class="lead">Quelques secondes. Ne fermez pas cette page.</p>
+      <ol class="creating" id="creating-list">
+        <li data-k="account"><span class="dot"></span><span>Ouverture de votre compte carte</span></li>
+        <li data-k="card"><span class="dot"></span><span>Émission de la carte virtuelle</span></li>
+        <li data-k="load"><span class="dot"></span><span>Chargement de <strong id="creating-amount">100 €</strong></span></li>
+        <li data-k="link"><span class="dot"></span><span>Envoi du lien d'activation par SMS</span></li>
+      </ol>
+    </section>
+
+    <!-- 7. Carte prête -->
+    <section class="screen" id="screen-ready" data-step="4">
+      <div class="steps" aria-hidden="true"></div>
+      <div class="steps-label">Étape 4 sur 4 : votre carte</div>
+      <div class="notice notice-demo" id="ready-demo-notice" hidden>Démonstration : cette carte n'est pas réelle.</div>
+      <h1>Votre carte est prête</h1>
+      <p class="lead" id="ready-lead"></p>
+      <div class="card-visual ready-card" id="ready-card" aria-hidden="true">
+        <div class="cv-top">
+          <div class="cv-brand" id="cv-brand-2">AVIA</div>
+          <div class="cv-kind">Carte virtuelle</div>
+        </div>
+        <div class="cv-bottom">
+          <div>
+            <div class="cv-amount" id="cv-amount-2">100 €</div>
+            <div class="cv-holder" id="cv-holder-2"></div>
+          </div>
+          <div class="cv-note" id="cv-last4"></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <a class="btn btn-primary" id="btn-open-card" href="#" target="_blank" rel="noopener">Ouvrir ma carte</a>
+      </div>
+      <p class="ready-meta" id="ready-meta"></p>
+      <ol class="wallet-steps">
+        <li><span class="n">1</span><span>Ouvrez le lien, acceptez les conditions : la carte s'affiche.</span></li>
+        <li><span class="n">2</span><span>Sur Android, touchez « Ajouter à Google Wallet ». Sur iPhone, ajoutez la carte dans Cartes en saisissant le numéro affiché.</span></li>
+        <li><span class="n">3</span><span>En station, approchez votre téléphone du terminal, comme avec une carte bancaire.</span></li>
+      </ol>
+      <div class="divider"></div>
+      <p class="small muted" id="ready-support"></p>
+      <div class="btn-row">
+        <button class="btn btn-ghost" data-go="#/">Acheter une autre carte</button>
+      </div>
+    </section>
+
+    <!-- 8. Erreur -->
+    <section class="screen" id="screen-error" data-step="4">
+      <h1>La carte n'a pas pu être créée</h1>
+      <div class="notice notice-error" id="error-text" style="margin-top:16px"></div>
+      <p class="muted" id="error-help"></p>
+      <div class="btn-row">
+        <button class="btn btn-ink" id="btn-retry">Réessayer</button>
+        <button class="btn btn-ghost" data-go="#/">Revenir à l'accueil</button>
+      </div>
+    </section>
+
+    <!-- 9. Entreprise -->
+    <section class="screen" id="screen-business">
+      <button class="back" data-go="#/">‹ Retour</button>
+      <h1>Commande pour une entreprise</h1>
+      <p class="lead">Des cartes carburant AVIA pour vos salariés, réglées par virement. Chaque salarié reçoit sa carte sur son téléphone.</p>
+      <form id="form-business" name="commande-entreprise" method="POST" data-netlify="true" netlify-honeypot="site-web" novalidate>
+        <input type="hidden" name="form-name" value="commande-entreprise">
+        <p class="sr-only"><label>Ne pas remplir : <input name="site-web"></label></p>
+        <div class="field">
+          <label for="b-company">Société</label>
+          <input class="input" id="b-company" name="societe" autocomplete="organization" required>
+          <div class="field-error">Indiquez le nom de la société.</div>
+        </div>
+        <div class="field">
+          <label for="b-siren">SIREN</label>
+          <input class="input" id="b-siren" name="siren" inputmode="numeric" placeholder="9 chiffres" required>
+          <div class="field-error">Le SIREN comporte 9 chiffres.</div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="b-contact">Votre nom</label>
+            <input class="input" id="b-contact" name="contact" autocomplete="name" required>
+            <div class="field-error">Indiquez votre nom.</div>
+          </div>
+          <div class="field">
+            <label for="b-phone">Téléphone</label>
+            <input class="input" id="b-phone" name="telephone" type="tel" autocomplete="tel" required>
+            <div class="field-error">Indiquez un téléphone.</div>
+          </div>
+        </div>
+        <div class="field">
+          <label for="b-email">E-mail professionnel</label>
+          <input class="input" id="b-email" name="email" type="email" autocomplete="email" required>
+          <div class="field-error">Entrez une adresse e-mail valide.</div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="b-count">Nombre de cartes</label>
+            <input class="input" id="b-count" name="nombre_cartes" type="number" min="1" step="1" required>
+            <div class="field-error" id="b-count-error">Indiquez un nombre de cartes.</div>
+          </div>
+          <div class="field">
+            <label for="b-face">Montant par carte</label>
+            <select class="input" id="b-face" name="montant_par_carte"></select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="b-msg">Précisions <span class="muted">(facultatif)</span></label>
+          <textarea class="input" id="b-msg" name="message" placeholder="Date souhaitée, occasion, contact RH…"></textarea>
+        </div>
+        <input type="hidden" name="total_facial" id="b-total-face">
+        <input type="hidden" name="total_a_payer" id="b-total-price">
+        <div class="summary" id="biz-summary" hidden></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" type="submit">Envoyer la demande</button>
+        </div>
+        <p class="small muted" style="margin-top:14px" id="biz-note"></p>
+      </form>
+    </section>
+
+    <!-- 10. Entreprise : confirmation -->
+    <section class="screen" id="screen-business-done">
+      <h1>Demande envoyée</h1>
+      <p class="lead">Voici la suite, dans l'ordre.</p>
+      <ol class="wallet-steps" style="margin-top:22px">
+        <li><span class="n">1</span><span>Vous recevez une facture pro forma et le fichier modèle des salariés (nom, prénom, date de naissance, nationalité, e-mail, mobile).</span></li>
+        <li><span class="n">2</span><span>Vous réglez par virement et nous renvoyez le fichier complété.</span></li>
+        <li><span class="n">3</span><span>À réception des fonds, chaque salarié reçoit sa carte par SMS et par e-mail.</span></li>
+      </ol>
+      <div class="btn-row">
+        <button class="btn btn-ghost" data-go="#/">Revenir à l'accueil</button>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="shell">
+    <div class="operator" id="footer-operator"></div>
+    <p id="footer-legal"></p>
+    <p id="footer-issuer"></p>
+    <p id="footer-support"></p>
+    <div class="legal-links">
+      <a id="footer-terms" href="/cg.html">Conditions générales du porteur</a>
+      <a href="/cg.html#donnees">Données personnelles</a>
+    </div>
+  </div>
+</footer>
+
+<script src="/app.js"></script>
+</body>
+</html>
