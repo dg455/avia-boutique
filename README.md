@@ -102,7 +102,7 @@ Dupliquer le dépôt ou créer une branche, modifier `public/config.js` (nom, lo
 
 La plateforme émettrice n'envoie rien au porteur : le lien d'activation est renvoyé à la boutique, qui l'affiche à l'écran et peut l'envoyer.
 
-- **E-mail (gratuit)** par SMTP — par exemple le compte Google Workspace de la boutique avec un mot de passe d'application : `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_USER=cartes@soshop.club`, `SMTP_PASS=<mot de passe d'application>`, `MAIL_FROM="AVIA by SoShop.Club <cartes@soshop.club>"`. Sans ces variables, aucun e-mail n'est envoyé et la page affiche seulement le lien et le QR code.
+- **E-mail (gratuit)** par SMTP — par exemple le compte Google Workspace de la boutique avec un mot de passe d'application : `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_USER=info@soshop.club`, `SMTP_PASS=<mot de passe d'application>`, `MAIL_FROM="AVIA by SoShop.Club <info@soshop.club>"`. Sans ces variables, aucun e-mail n'est envoyé et la page affiche seulement le lien et le QR code.
 - **SMS (payant, coupé par défaut)** via Brevo : `BREVO_API_KEY`, `SMS_SENDER=AVIA`, `DELIVERY_SMS=true`.
 - Le message contient un **lien court** `https://<boutique>/c/REF` (REF = référence de commande) qui mène à la page de guidage (Android / iPhone) portant le lien d'activation ; le lien d'activation lui-même ne s'ouvre qu'une fois. `SHOP_PUBLIC_ORIGIN` fixe l'origine de ces liens courts si elle diffère de celle des commandes.
 - `/api/health` indique `delivery.email` et `delivery.sms`.
