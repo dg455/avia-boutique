@@ -164,3 +164,23 @@ export async function creditAccount(cfg, accountId, amountCents, description, un
   }, uniqueId);
   return { transactionId: d && (d.transaction_id || d.id) || null, raw: d };
 }
+
+// Sonde de raccordement : un POST /customers volontairement vide. Le middleware doit répondre 400 (validation)
+// si le relais, la liste blanche d'IP et l'authentification sont bons ; rien n'est créé.
+// Résultat : { ok, verdict, status, ms } — verdict ∈ reachable-auth-ok | auth-rejected | ip-or-gateway-rejected | network | unexpected.
+export async function probe(cfg) {
+  const t0 = Date.now();
+  if (!cfg.enabled) return { ok: false, verdict: "disabled", status: 0, ms: 0 };
+  try {
+    await call(cfg, "POST", "/customers", {}, "P" + Date.now() + "-" + Math.floor(Math.random() * 1e6));
+    return { ok: false, verdict: "unexpected", status: 200, ms: Date.now() - t0 }; // un 200 sur un corps vide serait anormal
+  } catch (err) {
+    const status = err && err.status;
+    const ms = Date.now() - t0;
+    if (status === 400 || status === 422) return { ok: true, verdict: "reachable-auth-ok", status, ms };
+    if (status === 401) return { ok: false, verdict: "auth-rejected", status, ms };
+    if (status === 403 || status === 404 || status === 502 || status === 503) return { ok: false, verdict: "ip-or-gateway-rejected", status, ms };
+    if (!status) return { ok: false, verdict: "network", status: 0, ms, code: err && err.code };
+    return { ok: false, verdict: "unexpected", status, ms };
+  }
+}
