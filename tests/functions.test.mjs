@@ -66,12 +66,13 @@ const mw = createServer((req, resp) => {
 });
 await new Promise((ok) => mw.listen(0, "127.0.0.1", ok));
 
-const seenStripe = [];
+const seenStripe = []; let sessionPaid = false;
 const stripeMock = createServer((req, resp) => {
   let data = ""; req.on("data", (c) => (data += c)); req.on("end", () => {
     seenStripe.push({ method: req.method, url: req.url, body: data });
     resp.setHeader("content-type", "application/json");
     if (req.method === "POST" && req.url === "/v1/checkout/sessions") return resp.end(JSON.stringify({ id: "cs_test_1", object: "checkout.session", url: "https://checkout.stripe.test/cs_test_1" }));
+    if (req.method === "GET" && req.url.startsWith("/v1/checkout/sessions/cs_test_1")) return resp.end(JSON.stringify(sessionPaid ? { id: "cs_test_1", object: "checkout.session", status: "complete", payment_intent: { id: "pi_1", object: "payment_intent", status: "requires_capture", amount: 9600 } } : { id: "cs_test_1", object: "checkout.session", status: "open", payment_intent: null }));
     if (req.method === "GET" && req.url.startsWith("/v1/payment_intents/pi_1")) return resp.end(JSON.stringify({ id: "pi_1", object: "payment_intent", status: "requires_capture", amount: 9600 }));
     if (req.method === "POST" && req.url === "/v1/payment_intents/pi_1/capture") return resp.end(JSON.stringify({ id: "pi_1", status: "succeeded" }));
     if (req.method === "POST" && req.url === "/v1/payment_intents/pi_1/cancel") return resp.end(JSON.stringify({ id: "pi_1", status: "canceled" }));
@@ -140,6 +141,24 @@ st = await waitStatus(base, id2, "failed");
 assert.equal(st.status, "failed"); assert.equal(st.code, "DUPLICATE");
 assert.ok(seenStripe.some((s) => s.url === "/v1/payment_intents/pi_1/cancel"), "autorisation annulée, zéro débit");
 console.log("refus émetteur → annulation du paiement ok");
+
+// Retour client sans webhook : la session est vérifiée auprès de Stripe et l'émission démarre
+mwMode = "ok"; sessionPaid = true;
+const id3 = "44444444-2222-3333-4444-555555555555";
+await fetch(`${base}/api/payment-session`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(order(id3)) });
+st = await waitStatus(base, id3, "issued");
+assert.equal(st.status, "issued"); assert.equal(st.mode, "real");
+console.log("vérification au retour (sans webhook) → émission ok");
+
+// Émission simulée + paiement Stripe réel : autorisation annulée, jamais capturée
+delete process.env.MW_BASE_URL;
+const before = seenStripe.filter((s) => s.url.endsWith("/cancel")).length;
+const id4 = "55555555-2222-3333-4444-555555555555";
+await fetch(`${base}/api/payment-session`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(order(id4)) });
+st = await waitStatus(base, id4, "issued");
+assert.equal(st.status, "issued"); assert.equal(st.mode, "simulated"); assert.equal(st.paymentReleased, true);
+assert.equal(seenStripe.filter((s) => s.url.endsWith("/cancel")).length, before + 1, "autorisation annulée en simulation");
+console.log("simulation + Stripe réel → paiement annulé, rien débité ok");
 
 mw.close(); stripeMock.close(); app.close();
 console.log("TOUT OK");

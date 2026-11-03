@@ -39,7 +39,7 @@ docs/                   notes techniques
 | **Simulation** (aucune variable `MW_*`) | identifiants fictifs, lien vers `demo-carte.html` | formulaire fictif, aucun débit |
 | **Réel** (`MW_BASE_URL` renseignée) | appels au middleware | `PAYMENT_PROVIDER=stripe` (Stripe Checkout) ou `paytently` (à brancher) ; un paiement simulé est refusé sauf `ALLOW_SIMULATED_PAYMENT=true` (tests de production) |
 
-Paiement réel : autorisation seule à la caisse, carte créée et chargée, puis capture ; création refusée → autorisation annulée, zéro débit. Une commande se suit sur `/api/order-status` : `pending` → `issuing` → `issued` ou `failed`.
+Paiement réel : autorisation seule à la caisse, carte créée et chargée, puis capture ; création refusée → autorisation annulée, zéro débit. Tant que l'émission est simulée (pas de `MW_BASE_URL`), un paiement Stripe réel est toujours annulé après le parcours : on ne capture jamais pour une carte fictive. Une commande se suit sur `/api/order-status` : `pending` → `issuing` → `processing` → `issued` ou `failed` ; au retour de la caisse, la session Stripe est vérifiée directement, donc le webhook n'est pas indispensable (il couvre le client qui ferme son navigateur avant de revenir).
 
 Le mode courant se lit sur `/api/health`.
 

@@ -302,7 +302,7 @@
       try { const r = await fetch(`/api/order-status?orderId=${encodeURIComponent(state.orderId)}`, { cache: "no-store" }); j = await r.json().catch(() => ({})); if (r.status === 401) return fail({ code: "UNAUTHORIZED" }); } catch (e) { j = null; }
       if (j && j.status === "issued") {
         mark(0, "is-done"); mark(1, "is-done"); mark(2, "is-done"); mark(3, "is-doing");
-        state.result = { mode: j.mode, redeemUrl: j.redeemUrl, expiresIn: j.expiresIn, last4: j.last4 };
+        state.result = { mode: j.mode, redeemUrl: j.redeemUrl, expiresIn: j.expiresIn, last4: j.last4, paymentReleased: !!j.paymentReleased };
         if (state.person) remember(state.email, state.person);
         save();
         setTimeout(() => { mark(3, "is-done"); creating = false; go("#/ready"); }, 900);
@@ -344,6 +344,7 @@
   function paintReady() {
     const r = state.result, p = product(), q = state.person;
     $("#ready-demo-notice").hidden = r.mode !== "simulated";
+    $("#ready-demo-notice").textContent = r.paymentReleased ? "Démonstration : cette carte n'est pas réelle. Votre paiement a été annulé, rien n'est débité." : "Démonstration : cette carte n'est pas réelle.";
     $("#ready-lead").textContent = q
       ? `Le lien d'activation a été envoyé par SMS au ${maskPhone(q.dialing_code, q.mobile)} et par e-mail à ${maskEmail(state.email)}.`
       : "Le lien d'activation vous a été envoyé par SMS et par e-mail.";

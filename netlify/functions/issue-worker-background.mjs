@@ -13,6 +13,8 @@ export async function processOrder(orderId) {
   const order = await getOrder(orderId);
   if (!order) { console.log(JSON.stringify({ step: "worker", orderId, fail: "unknown-order" })); return null; }
   if (order.status !== "issuing") { console.log(JSON.stringify({ step: "worker", orderId, ignored: order.status })); return order; }
+  // Verrou optimiste : un second déclenchement (webhook + retour client) trouve « processing » et s'arrête.
+  order.status = "processing"; await saveOrder(order);
 
   const result = await issueCard({ orderId, person: order.person, email: order.email, faceCents: order.product.faceCents, origin: order.origin });
   order.mode = result.mode || order.mode || null;
@@ -22,8 +24,15 @@ export async function processOrder(orderId) {
     if (order.payment === "stripe" && order.paymentIntentId) {
       const stripe = getStripe();
       try {
-        if (order.paymentStatus === "requires_capture") await stripe.paymentIntents.capture(order.paymentIntentId);
-        order.captured = true;
+        if (result.mode === "simulated") {
+          // Émission simulée (pas de middleware) : on ne capture jamais un paiement réel pour une carte fictive.
+          if (order.paymentStatus === "requires_capture") { await stripe.paymentIntents.cancel(order.paymentIntentId); order.cancelled = true; }
+          else { await stripe.refunds.create({ payment_intent: order.paymentIntentId }); order.refunded = true; }
+          order.captured = false; order.paymentReleased = true;
+        } else {
+          if (order.paymentStatus === "requires_capture") await stripe.paymentIntents.capture(order.paymentIntentId);
+          order.captured = true;
+        }
       } catch (err) {
         // Carte émise mais paiement non capturé : à capturer à la main depuis Stripe, la commande reste « issued ».
         order.captured = false; order.captureError = String(err && err.message);

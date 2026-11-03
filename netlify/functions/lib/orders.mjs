@@ -43,6 +43,7 @@ export function publicView(order) {
     orderId: order.orderId, status: order.status, mode: order.mode || null, code: order.code || null,
     redeemUrl: order.result && order.result.redeemUrl || null,
     expiresIn: order.result && order.result.expiresIn || null,
-    last4: order.result && order.result.last4 || null
+    last4: order.result && order.result.last4 || null,
+    paymentReleased: !!order.paymentReleased
   };
 }

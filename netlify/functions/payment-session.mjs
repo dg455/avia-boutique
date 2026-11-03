@@ -35,9 +35,7 @@ export default async (request) => {
     const stripe = getStripe();
     const face = product.faceCents / 100;
     const cardName = process.env.SHOP_CARD_NAME || "Carte carburant AVIA";
-    let session;
-    try {
-      session = await stripe.checkout.sessions.create({
+    const sessionParams = {
         mode: "payment",
         locale: "fr",
         customer_email: email,
@@ -58,11 +56,21 @@ export default async (request) => {
         metadata: { orderId },
         success_url: `${origin}/#/creating?order=${orderId}`,
         cancel_url: `${origin}/#/review?cancel=1`,
-        expires_at: Math.floor(Date.now() / 1000) + 30 * 60
-      });
+        expires_at: Math.floor(Date.now() / 1000) + 45 * 60
+    };
+    let session;
+    try {
+      session = await stripe.checkout.sessions.create(sessionParams);
     } catch (err) {
-      console.log(JSON.stringify({ step: "stripe-session", orderId, fail: String(err && err.message) }));
-      return json(502, { ok: false, code: "PAYMENT_UNAVAILABLE", error: "Le paiement n'est pas disponible pour le moment." });
+      const msg = String(err && err.message);
+      if (/statement_descriptor/i.test(msg)) {
+        // Le compte n'a pas de libellé de relevé configuré : on retente sans suffixe.
+        try { delete sessionParams.payment_intent_data.statement_descriptor_suffix; session = await stripe.checkout.sessions.create(sessionParams); }
+        catch (err2) { console.log(JSON.stringify({ step: "stripe-session", orderId, fail: String(err2 && err2.message) })); return json(502, { ok: false, code: "PAYMENT_UNAVAILABLE", error: "Le paiement n'est pas disponible pour le moment." }); }
+      } else {
+        console.log(JSON.stringify({ step: "stripe-session", orderId, fail: msg }));
+        return json(502, { ok: false, code: "PAYMENT_UNAVAILABLE", error: "Le paiement n'est pas disponible pour le moment." });
+      }
     }
     await saveOrder({ orderId, status: "pending", payment: "stripe", sessionId: session.id, product, email, person: body.person, origin, createdAt: new Date().toISOString() });
     return json(200, { ok: true, provider, redirectUrl: session.url });
