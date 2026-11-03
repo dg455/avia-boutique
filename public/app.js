@@ -56,12 +56,16 @@
   function paintBrand() {
     document.documentElement.style.setProperty("--accent", CFG.brand.accent);
     document.documentElement.style.setProperty("--accent-deep", CFG.brand.accentDeep);
+    if (CFG.brand.navy) document.documentElement.style.setProperty("--ink", CFG.brand.navy);
     const brand = $("#brand-link");
     brand.innerHTML = CFG.brand.partnerLogo
-      ? `<img src="${esc(CFG.brand.partnerLogo)}" alt="${esc(CFG.brand.name)}"><span class="brand-sub">Carte virtuelle</span>`
+      ? `<img src="${esc(CFG.brand.partnerLogo)}" alt="${esc(CFG.brand.name)}"><span class="brand-by">by</span><img class="brand-op" src="${esc(CFG.brand.operatorLogo)}" alt="${esc(CFG.brand.operator)}">`
       : `<span class="brand-name">${esc(CFG.brand.name)}</span><span class="brand-sub">Carte virtuelle</span>`;
     $("#cv-brand").textContent = CFG.brand.name;
     $("#cv-brand-2").textContent = CFG.brand.name;
+    if (CFG.brand.cardImage) {
+      $$(".card-visual").forEach((cv) => { cv.classList.add("has-image"); cv.style.backgroundImage = `url("${CFG.brand.cardImage}")`; });
+    }
     $("#home-lead").textContent = `Remise de ${CFG.discountPct} % sur ${CFG.rules.usage}. La carte arrive sur votre téléphone en moins d'une minute, sans application.`;
     $("#benefit").innerHTML = `<strong>Comment ça marche.</strong> Vous payez ${money(product().priceCents)}, votre carte est créditée de ${money(product().faceCents)}. Elle fonctionne dans toutes les stations ${esc(CFG.brand.name)} pendant ${CFG.rules.validityMonths} mois.`;
     $("#privacy-note").textContent = CFG.legal.privacyNote;

@@ -36,7 +36,7 @@
       document.documentElement.style.setProperty("--accent", c.brand.accent);
       var b = document.getElementById("gate-brand");
       b.innerHTML = c.brand.partnerLogo
-        ? '<img src="' + c.brand.partnerLogo + '" alt="' + c.brand.name + '"><span class="brand-sub">Carte virtuelle</span>'
+        ? '<img src="' + c.brand.partnerLogo + '" alt="' + c.brand.name + '"><span class="brand-by">by</span><img class="brand-op" src="' + c.brand.operatorLogo + '" alt="' + c.brand.operator + '">'
         : '<span class="brand-name">' + c.brand.name + '</span><span class="brand-sub">Carte virtuelle</span>';
       document.getElementById("gate-operator").textContent = "Un service " + c.brand.operator + ".";
       var q = new URLSearchParams(location.search);

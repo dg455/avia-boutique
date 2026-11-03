@@ -12,14 +12,17 @@ window.SHOP_CONFIG = {
     // Nom complet de la carte.
     cardName: "Carte carburant AVIA",
     // Logo du partenaire : chemin d'un fichier dans /assets. Laisser vide pour afficher le nom en texte.
-    partnerLogo: "",
+    partnerLogo: "/assets/avia.svg",
+    // Visuel de la carte (image réelle) : affiché à la place de la carte dessinée en CSS.
+    cardImage: "/assets/carte-avia.png",
     // Mention de l'opérateur de la boutique.
     operator: "SoShop.Club",
     operatorLogo: "/assets/logo-soshop.png",
     operatorUrl: "https://soshop.club",
     // Couleurs du programme (le reste de la palette est dans styles.css).
-    accent: "#E1251B",
-    accentDeep: "#B8160F"
+    accent: "#ED1C24",
+    accentDeep: "#B8160F",
+    navy: "#0B2A7A"
   },
 
   // Produits en vente. Montants en centimes.

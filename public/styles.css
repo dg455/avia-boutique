@@ -61,6 +61,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
   line-height: 1;
 }
 .brand img { height: 28px; width: auto; }
+.brand .brand-by { font-size: 13px; color: var(--muted); font-style: italic; }
+.brand img.brand-op { height: 34px; }
 .brand .brand-sub { font-size: 14px; color: var(--muted); font-weight: 500; }
 .topbar-right { font-size: 14px; color: var(--muted); }
 .topbar-right a { color: var(--muted); }
@@ -111,6 +113,13 @@ p { margin: 0 0 12px; }
   background: linear-gradient(125deg, rgba(255,255,255,0.14), rgba(255,255,255,0) 45%);
   pointer-events: none;
 }
+/* Carte réelle (image) : les logos sont sur l'image, on ne garde que le montant et le nom. */
+.card-visual.has-image { background-color: #0B2A7A; background-size: cover; background-position: center; padding: 18px 20px; }
+.card-visual.has-image::after { background: none; }
+.card-visual.has-image .cv-top { visibility: hidden; }
+.card-visual.has-image .cv-note { display: none; }
+.card-visual.has-image .cv-amount, .card-visual.has-image .cv-holder, .card-visual.has-image .cv-note { text-shadow: 0 1px 8px rgba(0,0,0,0.75), 0 0 2px rgba(0,0,0,0.9); }
+.card-visual.has-image .cv-amount { font-size: 40px; }
 .card-visual .cv-top { display: flex; justify-content: space-between; align-items: flex-start; }
 .card-visual .cv-brand { font-family: var(--font-num); font-weight: 800; font-size: 28px; letter-spacing: 0.02em; line-height: 1; }
 .card-visual .cv-kind { font-size: 14px; opacity: 0.92; }
