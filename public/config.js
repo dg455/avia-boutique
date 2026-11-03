@@ -27,7 +27,9 @@ window.SHOP_CONFIG = {
   discountPct: 4,
   products: [
     { id: "avia-50",  faceCents: 5000,  priceCents: 4800,  label: "50 €" },
-    { id: "avia-100", faceCents: 10000, priceCents: 9600,  label: "100 €", default: true }
+    { id: "avia-100", faceCents: 10000, priceCents: 9600,  label: "100 €", default: true },
+    // Carte de test en production : visible seulement avec ?test=1 dans l'adresse (mémorisé sur l'appareil).
+    { id: "avia-test-1", faceCents: 100, priceCents: 100, label: "1 € (test)", test: true }
   ],
 
   // Règles du programme affichées au client (informatives).

@@ -38,6 +38,11 @@
   const maskPhone = (dial, n) => dial + " " + n.slice(0, 1) + " •• •• •• " + n.slice(-2);
   const maskEmail = (e) => { const [u, d] = e.split("@"); return (u.length > 2 ? u.slice(0, 2) : u) + "•••@" + d; };
 
+  // ----- Mode test : ?test=1 affiche les produits de test (mémorisé), ?test=0 les cache -----
+  (function () { try { const q = new URLSearchParams(location.search).get("test"); if (q === "1") localStorage.setItem("shop_test", "1"); if (q === "0") localStorage.removeItem("shop_test"); } catch (e) {} })();
+  const testMode = (() => { try { return localStorage.getItem("shop_test") === "1"; } catch (e) { return false; } })();
+  CFG.products = CFG.products.filter((p) => !p.test || testMode);
+
   // ----- État -----
   const state = load() || { product: defaultProduct(), email: "", person: null, orderId: null, result: null };
   function defaultProduct() { return (CFG.products.find((p) => p.default) || CFG.products[0]).id; }
@@ -77,7 +82,7 @@
     box.innerHTML = CFG.products.map((p) => `
       <button type="button" class="choice" data-id="${esc(p.id)}" aria-pressed="${p.id === state.product}">
         <div class="c-face">${money(p.faceCents)}</div>
-        <div class="c-price">pour ${money(p.priceCents)}</div>
+        <div class="c-price">${p.test ? "test de production" : "pour " + money(p.priceCents)}</div>
       </button>`).join("");
     $$(".choice", box).forEach((b) => b.addEventListener("click", () => { state.product = b.dataset.id; save(); paintProducts(); paintPrice(); }));
     paintPrice();

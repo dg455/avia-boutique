@@ -37,7 +37,8 @@ export function loadCatalog() {
   if (process.env.PRODUCTS_JSON) { try { return JSON.parse(process.env.PRODUCTS_JSON); } catch { /* ignoré */ } }
   return [
     { id: "avia-50", faceCents: 5000, priceCents: 4800 },
-    { id: "avia-100", faceCents: 10000, priceCents: 9600 }
+    { id: "avia-100", faceCents: 10000, priceCents: 9600 },
+    { id: "avia-test-1", faceCents: 100, priceCents: 100 }
   ];
 }
 
