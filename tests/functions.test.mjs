@@ -4,7 +4,13 @@
 import { createServer } from "node:http";
 import assert from "node:assert/strict";
 import Stripe from "stripe";
+import { rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { start } from "./dev-server.mjs";
+
+// Magasin local des commandes (voir lib/orders.mjs) : repartir de zéro, sinon un ancien test est rejoué (200 au lieu de 202).
+await rm(join(tmpdir(), "avia-boutique-orders"), { recursive: true, force: true });
 
 const order = (id, extra = {}) => ({
   orderId: id,
@@ -58,6 +64,9 @@ const mw = createServer((req, resp) => {
     resp.setHeader("content-type", "application/json");
     if (req.url === "/customers") {
       if (mwMode === "dup") { resp.statusCode = 409; return resp.end(JSON.stringify({ code: 4090001 })); }
+      // Refus réel de la plateforme (3 novembre 2026) : même mobile qu'une carte déjà émise → 424 + code 4245001.
+      if (mwMode === "dup424") { resp.statusCode = 424; return resp.end(JSON.stringify({ code: 4245001, message: "Customer already exists" })); }
+      if (mwMode === "down") { resp.statusCode = 424; return resp.end(JSON.stringify({ code: 4249999, message: "Platform unavailable" })); }
       const b = JSON.parse(data);
       if ("gender" in b) { resp.statusCode = 400; return resp.end(JSON.stringify({ code: 4000001, errors: { gender: ["unknown field"] } })); }
       if (!/^[A-Za-z0-9-._]{10,36}$/.test(req.headers["x-unique-id"] || "")) { resp.statusCode = 400; return resp.end(JSON.stringify({ code: 4000002, errors: { "x-unique-id": ["bad"] } })); }
@@ -148,6 +157,18 @@ st = await waitStatus(base, id2, "failed");
 assert.equal(st.status, "failed"); assert.equal(st.code, "DUPLICATE");
 assert.ok(seenStripe.some((s) => s.url === "/v1/payment_intents/pi_1/cancel"), "autorisation annulée, zéro débit");
 console.log("refus émetteur → annulation du paiement ok");
+
+// Même refus, tel que la plateforme le renvoie réellement (424 + code 4245001) → DUPLICATE, pas UPSTREAM ; autre 424 → UPSTREAM
+process.env.ALLOW_SIMULATED_PAYMENT = "true";
+for (const [mode, expected, id] of [["dup424", "DUPLICATE", "33333333-2222-3333-4444-555555555556"], ["down", "UPSTREAM", "33333333-2222-3333-4444-555555555557"]]) {
+  mwMode = mode;
+  res = await fetch(`${base}/api/issue-card`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(order(id)) });
+  assert.equal(res.status, 202);
+  st = await waitStatus(base, id, "failed");
+  assert.equal(st.code, expected, `424 ${mode} → ${expected}`);
+}
+delete process.env.ALLOW_SIMULATED_PAYMENT; mwMode = "ok";
+console.log("424 doublon plateforme → DUPLICATE, autre 424 → UPSTREAM ok");
 
 // Retour client sans webhook : la session est vérifiée auprès de Stripe et l'émission démarre
 mwMode = "ok"; sessionPaid = true;

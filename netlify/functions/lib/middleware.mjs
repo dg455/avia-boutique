@@ -36,7 +36,8 @@ export function middlewareConfig(env) {
     accountName: env.MW_ACCOUNT_NAME || "Voucher",
     timeoutMs: Number(env.MW_TIMEOUT_MS || 60000),
     environment: (env.MW_ENVIRONMENT || "production").toLowerCase() === "staging" ? "staging" : "production",
-    proxyUrl: env.OUTBOUND_PROXY_URL || ""
+    proxyUrl: env.OUTBOUND_PROXY_URL || "",
+    duplicateCodes: env.MW_DUPLICATE_CODES || "4245001" // codes plateforme (derrière un 424) = carte déjà émise pour ce mobile
   };
 }
 
@@ -98,12 +99,32 @@ async function call(cfg, method, path, body, uniqueId) {
   clearTimeout(timer);
   let data = null;
   try { data = text ? parseMiddlewareJson(text) : null; } catch (e) { data = { raw: text.slice(0, 500) }; }
-  console.log(JSON.stringify({ mw: path, uniqueId, status: res.status, ms: Date.now() - t0, code: data && data.code }));
+  const platformCode = data && data.code != null ? String(data.code) : null;
+  const msg = res.ok ? undefined : refusalMessage(data);
+  console.log(JSON.stringify({ mw: path, uniqueId, status: res.status, ms: Date.now() - t0, code: platformCode, msg }));
   if (!res.ok) {
-    const code = res.status === 409 ? "DUPLICATE" : res.status >= 500 || res.status === 424 ? "UPSTREAM" : "REFUSED";
+    // 409 = doublon signalé par le middleware. La plateforme signale aussi « une carte existe déjà pour ce mobile »
+    // par un 424 portant le code 4245001 (constaté le 3 novembre 2026 : même mobile → 4245001, mobile neuf → carte émise).
+    const duplicate = res.status === 409 || (res.status === 424 && duplicateCodes(cfg).includes(platformCode));
+    const code = duplicate ? "DUPLICATE" : res.status >= 500 || res.status === 424 ? "UPSTREAM" : "REFUSED";
     throw new MiddlewareError(code, `HTTP ${res.status}`, res.status, data);
   }
   return data;
+}
+
+// Codes de refus de la plateforme (derrière un 424) qui signifient « carte déjà émise pour cette personne ».
+function duplicateCodes(cfg) {
+  return String((cfg && cfg.duplicateCodes) || "4245001").split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+// Texte court du refus, pour les journaux (jamais renvoyé au navigateur).
+function refusalMessage(data) {
+  if (!data || typeof data !== "object") return undefined;
+  const parts = [];
+  for (const k of ["message", "detail", "title", "error", "raw"]) if (typeof data[k] === "string") parts.push(data[k]);
+  if (data.errors && typeof data.errors === "object") parts.push(JSON.stringify(data.errors));
+  const s = parts.join(" | ");
+  return s ? s.slice(0, 200) : undefined;
 }
 
 // Crée le client, le compte et la carte en un appel. Renvoie les identifiants et le lien d'activation.

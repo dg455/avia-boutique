@@ -36,6 +36,7 @@ Deux appels suffisent au parcours particulier. Référence : le Swagger de chaqu
 - Réponse : `id` (client), `account.id`, `card.id`, `card.redeemable_code.uri` (lien d'activation) et `card.redeemable_code.expires_in` (secondes). Toujours lire `expires_in`, ne jamais le coder en dur.
 - Le lien d'activation est à usage unique. Il n'existe pas d'endpoint de régénération dans le middleware.
 - Le caractère `+` dans une adresse e-mail est refusé (constaté le 3 novembre 2026).
+- Un second client avec un **mobile déjà utilisé** est refusé par la plateforme : réponse `424` avec `code: 4245001` (constaté le 3 novembre 2026 en staging : e-mail neuf + même mobile → 4245001 ; e-mail neuf + mobile neuf, même nom et même date de naissance → carte émise). Le nom et l'e-mail ne comptent pas, la clé est le mobile. La boutique traduit ce code en `DUPLICATE` (liste réglable par `MW_DUPLICATE_CODES`).
 
 ## 2. Charger la carte
 
