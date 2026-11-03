@@ -52,7 +52,7 @@ Le mode courant se lit sur `/api/health`.
 | `MW_BASIC_USER`, `MW_BASIC_PASS` | identifiants Basic de l'utilisateur API |
 | `MW_API_KEY`, `MW_API_KEY_HEADER` | clé API et nom de son en-tête (défaut `x-api-key`) |
 | `MW_CARD_STYLE`, `MW_ACCOUNT_NAME` | style de carte (`01`) et nom du compte (`Voucher`) |
-| `OUTBOUND_PROXY_URL` | proxy HTTP à IP fixe, si le middleware exige une liste blanche d'IP |
+| `OUTBOUND_PROXY_URL` | proxy HTTP à IP fixe (ex. QuotaGuard Static : `http://user:pass@eu-west-static-01.quotaguard.com:9293`), parce que le middleware exige une liste blanche d'IP ; les fonctions Netlify n'ont pas d'IP fixe |
 | `ALLOW_SIMULATED_PAYMENT` | `true` pour émettre sans paiement en mode réel (tests seulement) |
 | `PAYMENT_PROVIDER` | `simulated` (défaut), `stripe` ou `paytently` |
 | `STRIPE_SECRET_KEY` | clé API Stripe (clé restreinte : Checkout Sessions, PaymentIntents, Refunds en écriture) |

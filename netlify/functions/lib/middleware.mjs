@@ -39,13 +39,15 @@ export class MiddlewareError extends Error {
   constructor(code, message, status, body) { super(message); this.code = code; this.status = status; this.body = body; }
 }
 
-let dispatcherPromise = null;
-async function dispatcherFor(cfg) {
-  if (!cfg.proxyUrl) return undefined;
-  if (!dispatcherPromise) {
-    dispatcherPromise = import("undici").then(({ ProxyAgent }) => new ProxyAgent(cfg.proxyUrl));
+// Sortie par un proxy à IP fixe (OUTBOUND_PROXY_URL, ex. http://user:pass@proxy.example.com:9293) :
+// on utilise le fetch d'undici avec son ProxyAgent — le fetch natif de Node ignore un dispatcher venu d'un autre undici.
+let proxyPromise = null;
+async function fetcherFor(cfg) {
+  if (!cfg.proxyUrl) return { fetch: globalThis.fetch, dispatcher: undefined };
+  if (!proxyPromise) {
+    proxyPromise = import("undici").then(({ fetch, ProxyAgent }) => ({ fetch, dispatcher: new ProxyAgent({ uri: cfg.proxyUrl, requestTls: { rejectUnauthorized: true } }) }));
   }
-  return dispatcherPromise;
+  return proxyPromise;
 }
 
 async function call(cfg, method, path, body, uniqueId) {
@@ -62,8 +64,8 @@ async function call(cfg, method, path, body, uniqueId) {
   const t0 = Date.now();
   let res, text;
   try {
-    const dispatcher = await dispatcherFor(cfg);
-    res = await fetch(cfg.base + path, { method, headers, body: body ? JSON.stringify(body) : undefined, signal: ctrl.signal, dispatcher });
+    const { fetch: doFetch, dispatcher } = await fetcherFor(cfg);
+    res = await doFetch(cfg.base + path, { method, headers, body: body ? JSON.stringify(body) : undefined, signal: ctrl.signal, dispatcher });
     text = await res.text();
   } catch (err) {
     clearTimeout(timer);

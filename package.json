@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "check": "for f in netlify/functions/*.mjs netlify/functions/lib/*.mjs; do node --check $f || exit 1; done",
-    "test": "node tests/functions.test.mjs"
+    "test": "node tests/functions.test.mjs && node tests/proxy.test.mjs"
   },
   "dependencies": {
     "@netlify/blobs": "^8.2.0",
