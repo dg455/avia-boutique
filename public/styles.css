@@ -118,6 +118,7 @@ p { margin: 0 0 12px; }
 .card-visual.has-image::after { background: none; }
 .card-visual.has-image .cv-top { visibility: hidden; }
 .card-visual.has-image .cv-note { display: none; }
+.card-visual.has-image.ready-card .cv-note { display: block; }
 .card-visual.has-image .cv-amount, .card-visual.has-image .cv-holder, .card-visual.has-image .cv-note { text-shadow: 0 1px 8px rgba(0,0,0,0.75), 0 0 2px rgba(0,0,0,0.9); }
 .card-visual.has-image .cv-amount { font-size: 40px; }
 .card-visual .cv-top { display: flex; justify-content: space-between; align-items: flex-start; }

@@ -29,6 +29,7 @@
       var c = window.SHOP_CONFIG; var q = new URLSearchParams(location.search);
       document.documentElement.style.setProperty("--accent", c.brand.accent);
       document.getElementById("b").textContent = c.brand.name;
+      if (c.brand.cardImage) { var cv = document.querySelector(".card-visual"); cv.classList.add("has-image"); cv.style.backgroundImage = 'url("' + c.brand.cardImage + '")'; }
       document.getElementById("a").textContent = (q.get("face") || "100") + " €";
       document.getElementById("h").textContent = q.get("name") || "";
       document.getElementById("l4").textContent = q.get("l4") || "0000";
