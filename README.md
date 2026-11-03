@@ -106,3 +106,4 @@ La plateforme émettrice n'envoie rien au porteur : le lien d'activation est ren
 - **SMS (payant, coupé par défaut)** via Brevo : `BREVO_API_KEY`, `SMS_SENDER=AVIA`, `DELIVERY_SMS=true`.
 - Le message contient un **lien court** `https://<boutique>/c/REF` (REF = référence de commande) qui mène à la page de guidage (Android / iPhone) portant le lien d'activation ; le lien d'activation lui-même ne s'ouvre qu'une fois. `SHOP_PUBLIC_ORIGIN` fixe l'origine de ces liens courts si elle diffère de celle des commandes.
 - `/api/health` indique `delivery.email` et `delivery.sms`.
+- `POST /api/resend-link { orderId }` renvoie l'e-mail à l'adresse de la commande (bouton « renvoyez l'e-mail » sous le lien ; 3 renvois au plus, une minute entre deux).

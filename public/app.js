@@ -370,6 +370,8 @@
     $("#link-warning").dataset.sent = sent.length ? "1" : "";
     $("#ready-support").textContent = `Une question sur votre carte ? Service client ${CFG.support.phone}, ${CFG.support.phoneNote}.`;
     paintDevice(detectDevice(), url);
+    $("#resend-wrap").hidden = !(delivery.email && !r.fromQr && state.orderId);
+    $("#btn-resend").dataset.orderId = state.orderId || ""; $("#btn-resend").textContent = "renvoyez l'e-mail";
     state.orderId = null; state.payment = null; save();
   }
   // Appareil du client : détecté, modifiable par les onglets.
@@ -401,6 +403,15 @@
     try { await navigator.clipboard.writeText(url); btn.textContent = "Lien copié"; }
     catch (e) { const r = document.createRange(); r.selectNodeContents($("#link-text")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = "Sélectionné : copiez-le"; }
     setTimeout(() => { btn.textContent = "Copier le lien"; }, 2500);
+  });
+  $("#btn-resend").addEventListener("click", async () => {
+    const btn = $("#btn-resend"), orderId = btn.dataset.orderId;
+    if (!orderId || btn.disabled) return;
+    btn.disabled = true; btn.textContent = "envoi…";
+    let j = null;
+    try { const r = await fetch("/api/resend-link", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ orderId }) }); j = await r.json().catch(() => ({})); } catch (e) { j = null; }
+    btn.textContent = j && j.ok ? `e-mail renvoyé à ${j.email}` : (j && j.error) || "renvoi impossible, appelez le service client";
+    if (j && j.ok && j.remaining > 0 || (j && j.code === "TOO_SOON")) setTimeout(() => { btn.textContent = "renvoyez l'e-mail"; btn.disabled = false; }, 60000);
   });
   $("#btn-share-link").addEventListener("click", async () => {
     try { await navigator.share({ title: `${CFG.brand.cardName}`, text: "Votre lien d'activation (une seule ouverture) :", url: $("#link-text").textContent }); } catch (e) { /* annulé */ }

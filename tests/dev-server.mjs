@@ -13,7 +13,8 @@ const fns = {
   "/api/payment-session": () => import("../netlify/functions/payment-session.mjs"),
   "/api/stripe-webhook": () => import("../netlify/functions/stripe-webhook.mjs"),
   "/api/issue-worker": () => import("../netlify/functions/issue-worker-background.mjs"),
-  "/api/order-status": () => import("../netlify/functions/order-status.mjs")
+  "/api/order-status": () => import("../netlify/functions/order-status.mjs"),
+  "/api/resend-link": () => import("../netlify/functions/resend-link.mjs")
 };
 
 export function start(port = 8788) {

@@ -223,6 +223,17 @@ assert.equal(res.status, 302);
 assert.ok(res.headers.get("location").startsWith(`${base}/#/carte?u=`), "lien court → page de guidage");
 res = await fetch(`${base}/c/ZZZZZZZZ`, { redirect: "manual" });
 assert.equal(res.status, 404);
+// Renvoi de l'e-mail : vers l'adresse de la commande uniquement, 3 fois au plus, une minute entre deux
+res = await fetch(`${base}/api/resend-link`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ orderId: id5, email: "pirate@example.com" }) });
+let rs = await res.json();
+assert.equal(res.status, 200); assert.equal(rs.ok, true); assert.equal(rs.remaining, 2);
+assert.match(rs.email, /^j\*\*\*t@example\.com$/, "adresse masquée, celle de la commande");
+const again = await readOrder(id5);
+assert.equal(JSON.parse(again.delivery.email.preview).to[0].address, order(id5).email.toLowerCase(), "renvoyé à l'adresse de la commande, pas à celle de la requête");
+res = await fetch(`${base}/api/resend-link`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ orderId: id5 }) });
+rs = await res.json(); assert.equal(res.status, 429); assert.equal(rs.code, "TOO_SOON");
+res = await fetch(`${base}/api/resend-link`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ orderId: "00000000-0000-0000-0000-000000000000" }) });
+assert.equal(res.status, 404);
 delete process.env.SMTP_HOST; delete process.env.SMTP_USER; delete process.env.MAIL_FROM; delete process.env.ALLOW_SIMULATED_PAYMENT;
 console.log("remise du lien : e-mail + lien court ok");
 

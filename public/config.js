@@ -56,7 +56,7 @@ window.SHOP_CONFIG = {
   },
 
   // Envoi du lien d'activation en plus de l'affichage à l'écran : à activer quand un service d'envoi est raccordé.
-  delivery: { sms: false, email: false },
+  delivery: { sms: false, email: true },
 
   support: {
     phone: "0 811 880 200",
