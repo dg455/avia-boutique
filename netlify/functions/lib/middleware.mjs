@@ -10,7 +10,18 @@
 //   MW_CARD_STYLE        style de carte (défaut : 01)
 //   MW_ACCOUNT_NAME      nom du compte créé (défaut : Voucher)
 //   MW_TIMEOUT_MS        délai max par appel (défaut : 60000)
+//   MW_ENVIRONMENT       "production" (défaut) ou "staging" : en staging les cartes sont des cartes de test
+//                        et aucun paiement n'est jamais capturé
 //   OUTBOUND_PROXY_URL   proxy HTTP(S) à IP fixe, si le middleware exige une liste blanche d'IP
+//
+// Contrat vérifié sur le Swagger du middleware (v1, OpenAPI 3.0.4) :
+//   - en-têtes x-unique-id (10 à 36 caractères [A-Za-z0-9-._], unique pour TOUTES les requêtes) et x-api-key ;
+//   - POST /customers : first_name, last_name, email (sans « + »), birth_date (AAAA-MM-JJ), mobile_number (4 à 11 chiffres),
+//     mobile_number_dialing_code (+33), nationality (ISO alpha-3), card {style, emboss_name}, account {name, currency}
+//     — aucun champ de civilité, et tout champ inconnu est refusé (additionalProperties: false) ;
+//   - emboss_name : lettres A-Z, espaces, tirets et points seulement (pas de chiffres), 21 caractères max ;
+//   - les identifiants (client 9…, compte 8…, carte 7…) sont des entiers de 18 chiffres : au-delà de la précision
+//     de Number en JavaScript, ils sont lus comme des chaînes avant tout JSON.parse.
 
 export function middlewareConfig(env) {
   const base = (env.MW_BASE_URL || "").replace(/\/+$/, "");
@@ -24,15 +35,26 @@ export function middlewareConfig(env) {
     cardStyle: env.MW_CARD_STYLE || "01",
     accountName: env.MW_ACCOUNT_NAME || "Voucher",
     timeoutMs: Number(env.MW_TIMEOUT_MS || 60000),
+    environment: (env.MW_ENVIRONMENT || "production").toLowerCase() === "staging" ? "staging" : "production",
     proxyUrl: env.OUTBOUND_PROXY_URL || ""
   };
 }
 
-// Nom embossé : majuscules, chiffres, espaces, tirets, points ; sans accents ; 21 caractères max.
+// Nom embossé : majuscules, espaces, tirets, points ; sans accents ni chiffres ; 21 caractères max.
 export function embossName(first, last) {
-  return `${first} ${last}`
-    .normalize("NFD").replace(/[̀-ͯ]/g, "")
-    .toUpperCase().replace(/[^A-Z0-9 .-]/g, "").replace(/\s+/g, " ").trim().slice(0, 21);
+  const s = `${first} ${last}`
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase().replace(/[^A-Z .-]/g, " ").replace(/\s+/g, " ").trim().slice(0, 21).trim();
+  return s || "CARTE";
+}
+
+// Identifiant unique de la requête de chargement, dérivé de la commande (36 caractères max).
+export function loadUniqueId(orderId) { return ("L" + String(orderId).replace(/[^A-Za-z0-9]/g, "")).slice(0, 36); }
+
+// Les identifiants du middleware sont des entiers de 18 chiffres : on les garde en chaînes.
+export function parseMiddlewareJson(text) {
+  const safe = text.replace(/("(?:id|cardholder_id|account_id|customer_id|card_id)"\s*:\s*)(\d{16,})/g, '$1"$2"');
+  return JSON.parse(safe);
 }
 
 export class MiddlewareError extends Error {
@@ -75,7 +97,7 @@ async function call(cfg, method, path, body, uniqueId) {
   }
   clearTimeout(timer);
   let data = null;
-  try { data = text ? JSON.parse(text) : null; } catch (e) { data = { raw: text.slice(0, 500) }; }
+  try { data = text ? parseMiddlewareJson(text) : null; } catch (e) { data = { raw: text.slice(0, 500) }; }
   console.log(JSON.stringify({ mw: path, uniqueId, status: res.status, ms: Date.now() - t0, code: data && data.code }));
   if (!res.ok) {
     const code = res.status === 409 ? "DUPLICATE" : res.status >= 500 || res.status === 424 ? "UPSTREAM" : "REFUSED";
@@ -90,7 +112,6 @@ export async function createCustomerAndCard(cfg, person, uniqueId) {
     first_name: person.first_name,
     last_name: person.last_name,
     birth_date: person.birth_date,                 // AAAA-MM-JJ
-    gender: person.gender,                         // F / M — à confirmer avec le Swagger du middleware
     mobile_number: person.mobile,                  // sans le 0 initial
     mobile_number_dialing_code: person.dialing_code, // ex. +33
     nationality: person.nationality,               // ISO 3166-1 alpha-3
@@ -102,9 +123,9 @@ export async function createCustomerAndCard(cfg, person, uniqueId) {
   const card = (d && d.card) || {};
   const rc = card.redeemable_code || {};
   return {
-    customerId: d && d.id,
-    accountId: d && d.account && d.account.id,
-    cardId: card.id,
+    customerId: d && d.id != null ? String(d.id) : null,
+    accountId: d && d.account && d.account.id != null ? String(d.account.id) : null,
+    cardId: card.id != null ? String(card.id) : null,
     last4: card.last4 || card.masked_pan && String(card.masked_pan).slice(-4) || null,
     redeemUrl: rc.uri || rc.url || null,
     expiresIn: rc.expires_in || null,

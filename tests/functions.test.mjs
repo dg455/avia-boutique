@@ -10,7 +10,7 @@ const order = (id, extra = {}) => ({
   orderId: id,
   product: { id: "avia-100", faceCents: 10000, priceCents: 9600 },
   email: "Jean.Dupont@example.com",
-  person: { first_name: "Jean-Élie", last_name: "Dupont", birth_date: "1980-05-14", gender: "M", nationality: "FRA", dialing_code: "+33", mobile: "612345678" },
+  person: { first_name: "Jean-Élie", last_name: "Dupont", birth_date: "1980-05-14", nationality: "FRA", dialing_code: "+33", mobile: "612345678" },
   payment: { method: "simulated" },
   ...extra
 });
@@ -45,7 +45,7 @@ const noCookie = await issue(new Request(base + "/api/issue-card", { method: "PO
 assert.equal(noCookie.status, 401); console.log("porte fermée sans cookie ok");
 
 // Validation et catalogue
-res = await fetch(`${base}/api/issue-card`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(order("bbbbbbbb-0000", { person: { ...order("x").person, mobile: "0612" } })) });
+res = await fetch(`${base}/api/issue-card`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(order("bbbbbbbb-0000", { person: { ...order("x").person, mobile: "061" } })) });
 assert.equal(res.status, 400); console.log("validation ok:", (await res.json()).error);
 res = await fetch(`${base}/api/issue-card`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(order("cccccccc-0000", { product: { id: "avia-100", faceCents: 10000, priceCents: 100 } })) });
 assert.equal(res.status, 400); console.log("prix du client ignoré ok");
@@ -58,8 +58,12 @@ const mw = createServer((req, resp) => {
     resp.setHeader("content-type", "application/json");
     if (req.url === "/customers") {
       if (mwMode === "dup") { resp.statusCode = 409; return resp.end(JSON.stringify({ code: 4090001 })); }
-      return resp.end(JSON.stringify({ id: "959104060001252713", account: { id: "859104060001156411" }, card: { id: "759104060001524487", redeemable_code: { uri: "https://cards.example.com/abc", expires_in: 86400 } } }));
+      const b = JSON.parse(data);
+      if ("gender" in b) { resp.statusCode = 400; return resp.end(JSON.stringify({ code: 4000001, errors: { gender: ["unknown field"] } })); }
+      if (!/^[A-Za-z0-9-._]{10,36}$/.test(req.headers["x-unique-id"] || "")) { resp.statusCode = 400; return resp.end(JSON.stringify({ code: 4000002, errors: { "x-unique-id": ["bad"] } })); }
+      return resp.end('{"id":959104060001252713,"account":{"id":859104060001156411},"card":{"id":759104060001524487,"cardholder_id":759104060001524487,"redeemable_code":{"uri":"https://cards.example.com/abc","expires_in":86400}}}');
     }
+    if (req.url.startsWith("/accounts/") && !/^[A-Za-z0-9-._]{10,36}$/.test(req.headers["x-unique-id"] || "")) { resp.statusCode = 400; return resp.end(JSON.stringify({ code: 4000002 })); }
     if (req.url.startsWith("/accounts/") && req.url.endsWith("/credit")) return resp.end(JSON.stringify({ transaction_id: "tx-1" }));
     resp.statusCode = 404; resp.end("{}");
   });
@@ -115,12 +119,15 @@ assert.equal(st.status, "issued"); assert.equal(st.mode, "real"); assert.equal(s
 assert.ok(seenStripe.some((s) => s.url === "/v1/payment_intents/pi_1/capture"), "capture après émission");
 const create = seenMw.find((s) => s.url === "/customers");
 assert.equal(create.body.card.emboss_name, "JEAN-ELIE DUPONT");
+assert.ok(!("gender" in create.body), "pas de champ civilité");
 assert.equal(create.body.email, "jean.dupont@example.com");
 assert.equal(create.headers["x-unique-id"], id); assert.equal(create.headers["x-api-key"], "k");
 assert.ok(create.headers.authorization.startsWith("Basic "));
 const load = seenMw.find((s) => s.url.endsWith("/credit"));
 assert.deepEqual(load.body, { transaction_code: "AccountLoad", amount: 10000, description: "Boutique " + id });
-console.log("webhook → émission → capture ok");
+assert.equal(load.url, "/accounts/859104060001156411/credit", "identifiant de compte 18 chiffres conservé exactement");
+assert.ok(load.headers["x-unique-id"].length <= 36 && load.headers["x-unique-id"] !== id, "x-unique-id du chargement distinct et ≤ 36");
+console.log("webhook → émission → capture ok (ids 18 chiffres intacts, x-unique-id conformes)");
 
 // Rejeu du webhook : idempotent
 res = await fetch(`${base}/api/stripe-webhook`, { method: "POST", headers: { "content-type": "application/json", "stripe-signature": sig }, body: payload });
@@ -149,6 +156,20 @@ await fetch(`${base}/api/payment-session`, { method: "POST", headers: { "content
 st = await waitStatus(base, id3, "issued");
 assert.equal(st.status, "issued"); assert.equal(st.mode, "real");
 console.log("vérification au retour (sans webhook) → émission ok");
+
+// Staging : émission réelle sur la plateforme de test, paiement simulé accepté, paiement Stripe jamais capturé
+process.env.MW_ENVIRONMENT = "staging";
+r = await fetch(`${base}/api/health`).then((x) => x.json()); assert.equal(r.issuing, "staging");
+const idS = "66666666-2222-3333-4444-555555555555";
+res = await fetch(`${base}/api/issue-card`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(order(idS)) });
+assert.equal(res.status, 202, "paiement simulé accepté en staging");
+st = await waitStatus(base, idS, "issued"); assert.equal(st.status, "issued"); assert.equal(st.mode, "staging");
+const idS2 = "77777777-2222-3333-4444-555555555555"; const beforeS = seenStripe.filter((s) => s.url.endsWith("/cancel")).length;
+await fetch(`${base}/api/payment-session`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(order(idS2)) });
+st = await waitStatus(base, idS2, "issued"); assert.equal(st.mode, "staging"); assert.equal(st.paymentReleased, true);
+assert.equal(seenStripe.filter((s) => s.url.endsWith("/cancel")).length, beforeS + 1, "staging : autorisation annulée");
+console.log("staging : émission réelle, paiement jamais capturé ok");
+delete process.env.MW_ENVIRONMENT;
 
 // Émission simulée + paiement Stripe réel : autorisation annulée, jamais capturée
 delete process.env.MW_BASE_URL;

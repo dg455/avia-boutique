@@ -76,7 +76,7 @@
         <div class="field">
           <label for="f-email">E-mail</label>
           <input class="input" type="email" id="f-email" name="email" autocomplete="email" inputmode="email" required>
-          <div class="field-error">Entrez une adresse e-mail valide.</div>
+          <div class="field-error">Entrez une adresse e-mail valide (sans « + »).</div>
         </div>
         <div class="btn-row">
           <button class="btn btn-primary" type="submit">Continuer</button>
@@ -122,13 +122,6 @@
           <label for="f-birth">Date de naissance</label>
           <input class="input" type="date" id="f-birth" name="birth_date" autocomplete="bday" required>
           <div class="field-error">Vous devez avoir 18 ans ou plus.</div>
-        </div>
-        <div class="field">
-          <label>Civilité</label>
-          <div class="segmented" id="seg-gender">
-            <label class="is-on"><input type="radio" name="gender" value="F" checked>Madame</label>
-            <label><input type="radio" name="gender" value="M">Monsieur</label>
-          </div>
         </div>
         <div class="field">
           <label for="f-nat">Nationalité</label>

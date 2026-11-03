@@ -1,5 +1,6 @@
 // GET /api/health — état de la configuration, sans aucun secret.
 import { middlewareConfig } from "./lib/middleware.mjs";
+import { issuingMode } from "./lib/issue.mjs";
 import { paymentProvider } from "./lib/stripe.mjs";
 
 export const config = { path: "/api/health" };
@@ -8,7 +9,7 @@ export default async () => {
   const cfg = middlewareConfig(process.env);
   const body = {
     ok: true,
-    issuing: cfg.enabled ? "real" : "simulated",
+    issuing: issuingMode(),
     middlewareHost: cfg.enabled ? new URL(cfg.base).host : null,
     outboundProxy: !!cfg.proxyUrl,
     payment: paymentProvider(),

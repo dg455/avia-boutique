@@ -1,25 +1,27 @@
 // Émission d'une carte : simulation (aucune variable MW_*) ou réel (middleware).
 // Utilisé par /api/issue-card (paiement simulé) et par le webhook de paiement (paiement réel).
 
-import { middlewareConfig, createCustomerAndCard, creditAccount, embossName, MiddlewareError } from "./middleware.mjs";
+import { middlewareConfig, createCustomerAndCard, creditAccount, embossName, loadUniqueId, MiddlewareError } from "./middleware.mjs";
 
 export function validateOrder(body) {
   const errors = [];
   const p = body && body.person;
   const prod = body && body.product;
-  if (!body || typeof body.orderId !== "string" || body.orderId.length < 8 || body.orderId.length > 64 || !/^[A-Za-z0-9-]+$/.test(body.orderId)) errors.push("orderId");
+  if (!body || typeof body.orderId !== "string" || !/^[A-Za-z0-9-._]{10,36}$/.test(body.orderId)) errors.push("orderId");
   if (!prod || !Number.isInteger(prod.faceCents) || prod.faceCents <= 0 || prod.faceCents > 15000) errors.push("product");
   if (prod && (!Number.isInteger(prod.priceCents) || prod.priceCents <= 0 || prod.priceCents > prod.faceCents)) errors.push("price");
   if (!body || typeof body.email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(body.email)) errors.push("email");
   if (!p) errors.push("person");
   else {
-    for (const k of ["first_name", "last_name", "birth_date", "gender", "nationality", "dialing_code", "mobile"]) {
+    for (const k of ["first_name", "last_name", "birth_date", "nationality", "dialing_code", "mobile"]) {
       if (typeof p[k] !== "string" || !p[k].trim()) errors.push(k);
     }
-    if (p.birth_date && !/^\d{4}-\d{2}-\d{2}$/.test(p.birth_date)) errors.push("birth_date");
+    if (p.birth_date && !/^(19|20)\d{2}-(0[1-9]|1[012])-(0[1-9]|[12]\d|3[01])$/.test(p.birth_date)) errors.push("birth_date");
+    if (body.email && /\+/.test(body.email)) errors.push("email");
     if (p.nationality && !/^[A-Z]{3}$/.test(p.nationality)) errors.push("nationality");
     if (p.dialing_code && !/^\+\d{1,4}$/.test(p.dialing_code)) errors.push("dialing_code");
-    if (p.mobile && !/^\d{6,12}$/.test(p.mobile)) errors.push("mobile");
+    if (p.mobile && !/^\d{4,11}$/.test(p.mobile)) errors.push("mobile");
+    for (const k of ["first_name", "last_name"]) { if (typeof p[k] === "string" && (/[0-9_!¡?÷¿\/\\+=@#$%ˆ&*(){}|~<>;:\[\]]/.test(p[k]) || p[k].trim().length > 50)) errors.push(k); }
   }
   return errors;
 }
@@ -43,12 +45,16 @@ export function loadCatalog() {
 }
 
 export function isSimulation() { return !middlewareConfig(process.env).enabled; }
+// "simulated" (pas de middleware), "staging" (plateforme de test) ou "real" (production).
+export function issuingMode() { const c = middlewareConfig(process.env); return !c.enabled ? "simulated" : c.environment === "staging" ? "staging" : "real"; }
 
 // Résultat : { ok:true, mode, customerId, accountId, cardId, last4, redeemUrl, expiresIn, loadedCents, transactionId }
 // ou { ok:false, code } avec code ∈ DUPLICATE | REFUSED | UPSTREAM | TIMEOUT | LOAD_PENDING | ERROR.
 export async function issueCard({ orderId, person, email, faceCents, origin }) {
   const cfg = middlewareConfig(process.env);
-  const who = { ...person, email: String(email).trim().toLowerCase() };
+  const clean = (v) => String(v || "").normalize("NFC").replace(/\s+/g, " ").trim();
+  const who = { ...person, first_name: clean(person.first_name), last_name: clean(person.last_name), email: String(email).trim().toLowerCase() };
+  const mode = cfg.environment === "staging" ? "staging" : "real";
 
   if (!cfg.enabled) {
     await new Promise((r) => setTimeout(r, 1500));
@@ -77,7 +83,7 @@ export async function issueCard({ orderId, person, email, faceCents, origin }) {
 
   let loaded;
   try {
-    loaded = await creditAccount(cfg, created.accountId, faceCents, `Boutique ${orderId}`, orderId + "-load");
+    loaded = await creditAccount(cfg, created.accountId, faceCents, `Boutique ${orderId}`, loadUniqueId(orderId));
   } catch (err) {
     // Carte créée, chargement non confirmé : on n'insiste pas automatiquement (risque de double crédit).
     console.log(JSON.stringify({ step: "load", orderId, accountId: created.accountId, fail: err && err.code, status: err && err.status, body: err && err.body }));
@@ -85,7 +91,7 @@ export async function issueCard({ orderId, person, email, faceCents, origin }) {
   }
 
   return {
-    ok: true, mode: "real",
+    ok: true, mode,
     customerId: created.customerId, accountId: created.accountId, cardId: created.cardId,
     last4: created.last4, redeemUrl: created.redeemUrl, expiresIn: created.expiresIn,
     loadedCents: faceCents, transactionId: loaded.transactionId

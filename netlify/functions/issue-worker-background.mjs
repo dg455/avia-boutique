@@ -24,8 +24,8 @@ export async function processOrder(orderId) {
     if (order.payment === "stripe" && order.paymentIntentId) {
       const stripe = getStripe();
       try {
-        if (result.mode === "simulated") {
-          // Émission simulée (pas de middleware) : on ne capture jamais un paiement réel pour une carte fictive.
+        if (result.mode !== "real") {
+          // Émission simulée ou en staging : on ne capture jamais un paiement réel pour une carte qui n'est pas réelle.
           if (order.paymentStatus === "requires_capture") { await stripe.paymentIntents.cancel(order.paymentIntentId); order.cancelled = true; }
           else { await stripe.refunds.create({ payment_intent: order.paymentIntentId }); order.refunded = true; }
           order.captured = false; order.paymentReleased = true;

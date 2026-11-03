@@ -8,7 +8,7 @@
 //   - le produit doit exister au catalogue serveur (le client ne fixe pas le prix).
 
 import { gateOk, json } from "./lib/http.mjs";
-import { validateOrder, catalogProduct, isSimulation } from "./lib/issue.mjs";
+import { validateOrder, catalogProduct, issuingMode } from "./lib/issue.mjs";
 import { getOrder, saveOrder } from "./lib/orders.mjs";
 import { internalToken } from "./lib/stripe.mjs";
 
@@ -25,7 +25,7 @@ export default async (request) => {
   const product = catalogProduct(body);
   if (!product) return json(400, { ok: false, code: "INVALID", error: "Produit inconnu." });
 
-  if (!isSimulation() && process.env.ALLOW_SIMULATED_PAYMENT !== "true") {
+  if (issuingMode() === "real" && process.env.ALLOW_SIMULATED_PAYMENT !== "true") {
     return json(402, { ok: false, code: "PAYMENT_REQUIRED", error: "Le paiement n'a pas été confirmé." });
   }
 

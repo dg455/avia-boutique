@@ -55,15 +55,15 @@ const cfg = middlewareConfig({
   MW_BASE_URL: `https://localhost:${mwPort}`, MW_BASIC_USER: "u", MW_BASIC_PASS: "p", MW_API_KEY: "k",
   OUTBOUND_PROXY_URL: `http://quota:secret@127.0.0.1:${proxy.address().port}`
 });
-const person = { first_name: "Jean", last_name: "Dupont", birth_date: "1980-05-14", gender: "M", nationality: "FRA", dialing_code: "+33", mobile: "612345678", email: "jean@example.com" };
-const created = await createCustomerAndCard(cfg, person, "order-1");
+const person = { first_name: "Jean", last_name: "Dupont", birth_date: "1980-05-14", nationality: "FRA", dialing_code: "+33", mobile: "612345678", email: "jean@example.com" };
+const created = await createCustomerAndCard(cfg, person, "order-1-abcdef");
 assert.equal(created.accountId, "a1"); assert.equal(created.redeemUrl, "https://cards.example.com/x");
-const loaded = await creditAccount(cfg, created.accountId, 100, "Boutique order-1", "order-1-load");
+const loaded = await creditAccount(cfg, created.accountId, 100, "Boutique order-1", "Lorder1abcdef");
 assert.equal(loaded.transactionId, "t1");
 assert.equal(tunnels.length, 2, "les deux appels sont passés par le proxy");
 assert.ok(tunnels.every((t) => t === `localhost:${mwPort}`));
 const create = seen.find((s) => s.url === "/customers");
-assert.equal(create.headers["x-api-key"], "k"); assert.equal(create.headers["x-unique-id"], "order-1");
+assert.equal(create.headers["x-api-key"], "k"); assert.equal(create.headers["x-unique-id"], "order-1-abcdef");
 assert.ok(create.headers.authorization.startsWith("Basic "));
 assert.equal(create.body.card.emboss_name, "JEAN DUPONT");
 

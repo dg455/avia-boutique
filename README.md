@@ -52,6 +52,7 @@ Le mode courant se lit sur `/api/health`.
 | `MW_BASIC_USER`, `MW_BASIC_PASS` | identifiants Basic de l'utilisateur API |
 | `MW_API_KEY`, `MW_API_KEY_HEADER` | clé API et nom de son en-tête (défaut `x-api-key`) |
 | `MW_CARD_STYLE`, `MW_ACCOUNT_NAME` | style de carte (`01`) et nom du compte (`Voucher`) |
+| `MW_ENVIRONMENT` | `production` (défaut) ou `staging` : en staging les cartes sont des cartes de test, le paiement simulé est accepté et un paiement Stripe n'est jamais capturé |
 | `OUTBOUND_PROXY_URL` | proxy HTTP à IP fixe (ex. QuotaGuard Static : `http://user:pass@eu-west-static-01.quotaguard.com:9293`), parce que le middleware exige une liste blanche d'IP ; les fonctions Netlify n'ont pas d'IP fixe |
 | `ALLOW_SIMULATED_PAYMENT` | `true` pour émettre sans paiement en mode réel (tests seulement) |
 | `PAYMENT_PROVIDER` | `simulated` (défaut), `stripe` ou `paytently` |
@@ -94,4 +95,4 @@ Dupliquer le dépôt ou créer une branche, modifier `public/config.js` (nom, lo
 
 - Paiement hébergé Paytently : `payment-session.mjs` + webhook de confirmation → émission → capture.
 - Entreprises : traitement du fichier salariés (émission en lot après réception du virement).
-- Champ `gender` et nom exact de l'en-tête de clé API : à confirmer avec le Swagger du middleware.
+- Contrat du middleware vérifié sur son Swagger (en-tête `x-api-key`, pas de champ de civilité, identifiants de 18 chiffres lus en chaînes) : voir `docs/api-middleware.md`.

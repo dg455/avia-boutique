@@ -116,7 +116,7 @@
     if (field) field.classList.toggle("has-error", !!on);
     input.setAttribute("aria-invalid", on ? "true" : "false");
   }
-  const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim());
+  const isEmail = (v) => /^[^\s@+]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim());
   function isAdult(iso) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false;
     const d = new Date(iso + "T00:00:00"); if (isNaN(d)) return false;
@@ -131,7 +131,7 @@
   }
   function mobileOk(dial, n) {
     if (dial === "+33") return /^[67]\d{8}$/.test(n);
-    return /^\d{6,12}$/.test(n);
+    return /^\d{4,11}$/.test(n);
   }
 
   // ----- Écrans -----
@@ -199,13 +199,11 @@
   $("#btn-known-edit").addEventListener("click", () => go("#/details"));
 
   // ----- Coordonnées -----
-  $$("#seg-gender label").forEach((l) => l.addEventListener("click", () => { $$("#seg-gender label").forEach((x) => x.classList.remove("is-on")); l.classList.add("is-on"); }));
   function fillDetails() {
     const p = state.person; if (!p) return;
     $("#f-first").value = p.first_name || ""; $("#f-last").value = p.last_name || "";
     $("#f-birth").value = p.birth_date || ""; $("#f-nat").value = p.nationality || "FRA";
     $("#f-dial").value = p.dialing_code || "+33"; $("#f-mobile").value = p.mobile || "";
-    $$("#seg-gender input").forEach((i) => { i.checked = i.value === (p.gender || "F"); i.closest("label").classList.toggle("is-on", i.checked); });
   }
   $("#form-details").addEventListener("submit", (e) => {
     e.preventDefault();
@@ -219,7 +217,6 @@
     if (!ok) { ($(".has-error .input") || first).focus(); return; }
     state.person = {
       first_name: fv, last_name: lv, birth_date: birth.value,
-      gender: ($("#seg-gender input:checked") || {}).value || "F",
       nationality: $("#f-nat").value, dialing_code: dial, mobile: n
     };
     save(); paintPrice(); go("#/review");
@@ -338,13 +335,15 @@
     }
   }
   function showError(text, help) { $("#error-text").textContent = text; $("#error-help").textContent = help || ""; go("#/error"); }
-  $("#btn-retry").addEventListener("click", () => { if (state.orderId) go(`#/creating?order=${state.orderId}`); else go("#/"); });
+  $("#btn-retry").addEventListener("click", () => { state.orderId = null; state.payment = null; save(); go(state.person ? "#/review" : "#/"); });
 
   // ----- Carte prête -----
   function paintReady() {
     const r = state.result, p = product(), q = state.person;
-    $("#ready-demo-notice").hidden = r.mode !== "simulated";
-    $("#ready-demo-notice").textContent = r.paymentReleased ? "Démonstration : cette carte n'est pas réelle. Votre paiement a été annulé, rien n'est débité." : "Démonstration : cette carte n'est pas réelle.";
+    $("#ready-demo-notice").hidden = r.mode === "real";
+    $("#ready-demo-notice").textContent = r.mode === "staging"
+      ? "Plateforme de test : cette carte est une carte de test, non utilisable en station." + (r.paymentReleased ? " Votre paiement a été annulé, rien n'est débité." : "")
+      : "Démonstration : cette carte n'est pas réelle." + (r.paymentReleased ? " Votre paiement a été annulé, rien n'est débité." : "");
     $("#ready-lead").textContent = q
       ? `Le lien d'activation a été envoyé par SMS au ${maskPhone(q.dialing_code, q.mobile)} et par e-mail à ${maskEmail(state.email)}.`
       : "Le lien d'activation vous a été envoyé par SMS et par e-mail.";
