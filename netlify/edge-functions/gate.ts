@@ -14,7 +14,7 @@ const OPEN_PATHS = new Set([
   "/api/stripe-webhook",   // notifications Stripe (signature vérifiée dans la fonction)
   "/api/issue-worker"      // fonction d'arrière-plan (jeton interne vérifié dans la fonction)
 ]);
-const OPEN_PREFIXES = ["/assets/", "/.netlify/"];
+const OPEN_PREFIXES = ["/assets/", "/.netlify/", "/c/"];   // /c/REF : lien court remis au porteur par e-mail — il pose lui-même le cookie (card-link.mjs)
 
 async function token(code: string): Promise<string> {
   const data = new TextEncoder().encode("shop-gate|" + code);
