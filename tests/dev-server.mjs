@@ -20,12 +20,13 @@ export function start(port = 8788) {
   const cookie = "shop_gate=" + createHash("sha256").update("shop-gate|" + (process.env.SHOP_ACCESS_CODE || "Avia2026")).digest("hex");
   const server = createServer(async (req, res) => {
     const url = new URL(req.url, "http://localhost");
-    if (fns[url.pathname]) {
+    const shortCode = url.pathname.match(/^\/c\/([A-Za-z0-9]+)$/);
+    if (fns[url.pathname] || shortCode) {
       const chunks = []; for await (const c of req) chunks.push(c);
-      const { default: handler } = await fns[url.pathname]();
+      const { default: handler } = shortCode ? await import("../netlify/functions/card-link.mjs") : await fns[url.pathname]();
       const headers = { ...req.headers, cookie };
       const origin = `http://127.0.0.1:${server.address().port}`;
-      const r = await handler(new Request(origin + req.url, { method: req.method, headers, body: req.method === "POST" ? Buffer.concat(chunks) : undefined }), {});
+      const r = await handler(new Request(origin + req.url, { method: req.method, headers, body: req.method === "POST" ? Buffer.concat(chunks) : undefined }), shortCode ? { params: { code: shortCode[1] } } : {});
       res.writeHead(r.status, Object.fromEntries(r.headers)); res.end(Buffer.from(await r.arrayBuffer())); return;
     }
     if (req.method === "POST" && url.pathname === "/") { res.writeHead(200); res.end("ok"); return; } // formulaire entreprise

@@ -56,5 +56,5 @@ Deux appels suffisent au parcours particulier. Référence : le Swagger de chaqu
 - Une carte par personne et par 30 jours, contrôlée par le couple e-mail + mobile.
 - Données obligatoires : prénom, nom, date de naissance, civilité, nationalité, e-mail, mobile.
 - Plafond plateforme 150 € ; plafond du programme AVIA 100 €.
-- Le lien d'activation est envoyé par SMS par la plateforme ; la boutique l'affiche aussi et peut l'envoyer par e-mail.
+- Le lien d'activation n'est **pas** envoyé au porteur par la plateforme (confirmé par écrit le 23 août 2026 : « The redemption link is returned to you in the API response. Delivering it to the end customer is yours ») : la boutique l'affiche et l'envoie elle-même (e-mail, SMS).
 - Portefeuille : Google en push, Apple par saisie manuelle du numéro tant que la certification n'est pas faite.

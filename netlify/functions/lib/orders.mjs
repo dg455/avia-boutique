@@ -36,6 +36,24 @@ export async function saveOrder(order) {
   return order;
 }
 
+// Lien court /c/REF : REF (8 caractères) → identifiant de commande, enregistré à l'émission.
+export async function saveShortCode(code, orderId) {
+  const key = "code:" + String(code).toUpperCase();
+  const store = await blobStore();
+  if (store) { await store.setJSON(key, { orderId }); return; }
+  await mkdir(LOCAL_DIR, { recursive: true });
+  await writeFile(join(LOCAL_DIR, key + ".json"), JSON.stringify({ orderId }));
+}
+export async function getOrderByCode(code) {
+  if (!/^[A-Za-z0-9]{6,12}$/.test(String(code))) return null;
+  const key = "code:" + String(code).toUpperCase();
+  const store = await blobStore();
+  let map = null;
+  if (store) map = await store.get(key, { type: "json" });
+  else { try { map = JSON.parse(await readFile(join(LOCAL_DIR, key + ".json"), "utf8")); } catch { map = null; } }
+  return map && map.orderId ? getOrder(map.orderId) : null;
+}
+
 // Ce que la boutique peut afficher au client (jamais les données complètes).
 export function publicView(order) {
   if (!order) return null;

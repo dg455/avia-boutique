@@ -14,3 +14,13 @@ export function gateOk(request, env) {
   const m = cookie.match(/(?:^|;\s*)shop_gate=([a-f0-9]{64})/);
   return !!m && m[1] === expected;
 }
+
+// Marque telle que les messages au porteur la nomment (mêmes valeurs par défaut que public/config.js).
+export function brandInfo(env) {
+  return {
+    name: env.BRAND_NAME || "AVIA",
+    cardName: env.BRAND_CARD_NAME || "Carte carburant AVIA",
+    operator: env.BRAND_OPERATOR || "SoShop.Club",
+    supportPhone: env.SUPPORT_PHONE || "0 811 880 200"
+  };
+}

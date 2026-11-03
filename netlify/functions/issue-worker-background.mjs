@@ -3,9 +3,11 @@
 // Protégée par un jeton interne, jamais appelée par le navigateur.
 
 import { json } from "./lib/http.mjs";
-import { getOrder, saveOrder } from "./lib/orders.mjs";
+import { getOrder, saveOrder, saveShortCode } from "./lib/orders.mjs";
 import { issueCard } from "./lib/issue.mjs";
 import { getStripe, internalToken } from "./lib/stripe.mjs";
+import { sendCardLink, shortCode } from "./lib/notify.mjs";
+import { brandInfo } from "./lib/http.mjs";
 
 export const config = { path: "/api/issue-worker" };
 
@@ -61,6 +63,12 @@ export async function processOrder(orderId) {
   }
   await saveOrder(order);
   console.log(JSON.stringify({ step: "worker", orderId, status: order.status, code: order.code, captured: order.captured }));
+  if (order.status === "issued") {
+    // Lien court /c/REF puis remise du lien au porteur (e-mail, SMS) ; jamais bloquant pour la commande.
+    try { await saveShortCode(shortCode(orderId), orderId); } catch (err) { console.log(JSON.stringify({ step: "shortcode", orderId, fail: String(err && err.message) })); }
+    order.delivery = await sendCardLink({ env: process.env, order, brand: brandInfo(process.env) });
+    await saveOrder(order);
+  }
   return order;
 }
 

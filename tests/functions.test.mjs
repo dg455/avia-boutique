@@ -202,5 +202,29 @@ assert.equal(st.status, "issued"); assert.equal(st.mode, "simulated"); assert.eq
 assert.equal(seenStripe.filter((s) => s.url.endsWith("/cancel")).length, before + 1, "autorisation annulée en simulation");
 console.log("simulation + Stripe réel → paiement annulé, rien débité ok");
 
+// Remise du lien au porteur : e-mail (transport JSON, aucun envoi réel) avec le lien court /c/REF, qui renvoie vers la page de guidage
+process.env.SMTP_HOST = "json"; process.env.SMTP_USER = "cartes@example.com"; process.env.MAIL_FROM = "AVIA by SoShop.Club <cartes@example.com>";
+process.env.ALLOW_SIMULATED_PAYMENT = "true";
+const id5 = "88888888-2222-3333-4444-555555555555";
+res = await fetch(`${base}/api/issue-card`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(order(id5)) });
+assert.equal(res.status, 202);
+st = await waitStatus(base, id5, "issued");
+const { getOrder: readOrder } = await import("../netlify/functions/lib/orders.mjs");
+const full = await readOrder(id5);
+assert.ok(full.delivery && full.delivery.email && full.delivery.email.ok, "e-mail construit et remis au transport");
+const mail = JSON.parse(full.delivery.email.preview);
+assert.equal(mail.to[0].address, order(id5).email.toLowerCase());
+assert.match(mail.subject, /prête/);
+assert.ok(mail.text.includes(`${base}/c/88888888`), "lien court dans l'e-mail");
+assert.ok(mail.html.includes("Google Wallet") && mail.html.includes("Cartes"), "consignes Android et iPhone dans l'e-mail");
+assert.equal(full.delivery.sms, null, "SMS coupé par défaut (payant)");
+res = await fetch(`${base}/c/88888888`, { redirect: "manual" });
+assert.equal(res.status, 302);
+assert.ok(res.headers.get("location").startsWith(`${base}/#/carte?u=`), "lien court → page de guidage");
+res = await fetch(`${base}/c/ZZZZZZZZ`, { redirect: "manual" });
+assert.equal(res.status, 404);
+delete process.env.SMTP_HOST; delete process.env.SMTP_USER; delete process.env.MAIL_FROM; delete process.env.ALLOW_SIMULATED_PAYMENT;
+console.log("remise du lien : e-mail + lien court ok");
+
 mw.close(); stripeMock.close(); app.close();
 console.log("TOUT OK");
