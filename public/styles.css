@@ -227,6 +227,21 @@ textarea.input { min-height: 110px; resize: vertical; }
 .wallet-steps li { display: grid; grid-template-columns: 28px 1fr; gap: 10px; }
 .wallet-steps .n { font-family: var(--font-num); font-weight: 700; color: var(--accent); font-size: 20px; line-height: 1.2; }
 .ready-meta { margin-top: 18px; font-size: 14px; color: var(--muted); }
+.device-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 22px; padding: 4px; background: var(--mist); border-radius: 12px; }
+.device-tab { border: 0; background: transparent; border-radius: 9px; padding: 10px 8px; font: inherit; font-weight: 600; color: var(--muted); cursor: pointer; }
+.device-tab.is-active { background: var(--paper); color: var(--ink); box-shadow: 0 2px 8px -2px rgba(20,27,45,0.25); }
+.device-pane .wallet-steps { margin-top: 18px; }
+.btn-row-tight { margin-top: 10px; gap: 8px; }
+.btn-sm { padding: 10px 14px; font-size: 15px; }
+.lead-sm { font-size: 16px; color: var(--muted); margin: 18px 0 0; }
+.qr-box { display: grid; place-items: center; margin: 16px 0 6px; padding: 16px; border: 1.5px solid var(--line); border-radius: var(--radius); background: #fff; }
+.qr-box svg { width: 200px; height: 200px; display: block; }
+.link-box { margin-top: 22px; padding: 14px 16px; border-radius: var(--radius); background: var(--mist); }
+.link-box-label { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.link-box-url { font-family: var(--font-num, monospace); font-size: 13px; word-break: break-all; margin-top: 6px; color: var(--ink); }
+.link-box .btn-row-tight { grid-template-columns: 1fr 1fr; }
+.link-box p { margin: 10px 0 0; }
+[hidden] { display: none !important; }
 
 /* ----- Page d'entrée ----- */
 .gate { min-height: 100dvh; display: grid; place-items: center; padding: 24px; background: var(--mist); }

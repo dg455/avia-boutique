@@ -71,7 +71,7 @@
       <div class="steps" aria-hidden="true"></div>
       <div class="steps-label">Étape 2 sur 4 : vos coordonnées</div>
       <h1>Votre adresse e-mail</h1>
-      <p class="lead">Vous recevrez votre carte par SMS et par e-mail.</p>
+      <p class="lead">Votre carte s'affiche dès le paiement et s'ajoute à votre téléphone en trois gestes.</p>
       <form id="form-email" novalidate>
         <div class="field">
           <label for="f-email">E-mail</label>
@@ -133,7 +133,7 @@
             <select class="input" id="f-dial" name="dialing_code" aria-label="Indicatif"></select>
             <input class="input" type="tel" id="f-mobile" name="mobile" autocomplete="tel-national" inputmode="tel" placeholder="6 12 34 56 78" required>
           </div>
-          <div class="hint">Le lien pour ouvrir votre carte arrive par SMS sur ce numéro. Une carte par numéro de mobile et par période de 30 jours.</div>
+          <div class="hint">Numéro obligatoire pour émettre la carte. Une carte par numéro de mobile et par période de 30 jours.</div>
           <div class="field-error">Entrez un numéro de mobile valide.</div>
         </div>
         <p class="small muted" id="privacy-note" style="margin-top:18px"></p>
@@ -199,7 +199,7 @@
         <li data-k="account"><span class="dot"></span><span>Ouverture de votre compte carte</span></li>
         <li data-k="card"><span class="dot"></span><span>Émission de la carte virtuelle</span></li>
         <li data-k="load"><span class="dot"></span><span>Chargement de <strong id="creating-amount">100 €</strong></span></li>
-        <li data-k="link"><span class="dot"></span><span>Envoi du lien d'activation par SMS</span></li>
+        <li data-k="link"><span class="dot"></span><span>Préparation de votre lien d'activation</span></li>
       </ol>
     </section>
 
@@ -223,15 +223,57 @@
           <div class="cv-note" id="cv-last4"></div>
         </div>
       </div>
-      <div class="btn-row">
-        <a class="btn btn-primary" id="btn-open-card" href="#" target="_blank" rel="noopener">Ouvrir ma carte</a>
-      </div>
       <p class="ready-meta" id="ready-meta"></p>
-      <ol class="wallet-steps">
-        <li><span class="n">1</span><span>Ouvrez le lien, acceptez les conditions : la carte s'affiche.</span></li>
-        <li><span class="n">2</span><span>Sur Android, touchez « Ajouter à Google Wallet ». Sur iPhone, ajoutez la carte dans Cartes en saisissant le numéro affiché.</span></li>
-        <li><span class="n">3</span><span>En station, approchez votre téléphone du terminal, comme avec une carte bancaire.</span></li>
-      </ol>
+
+      <!-- Choix de l'appareil : détecté automatiquement, modifiable -->
+      <div class="device-tabs" id="device-tabs" role="tablist" aria-label="Votre téléphone">
+        <button class="device-tab" type="button" data-device="android" role="tab">Android</button>
+        <button class="device-tab" type="button" data-device="ios" role="tab">iPhone</button>
+        <button class="device-tab" type="button" data-device="other" role="tab">Ordinateur</button>
+      </div>
+
+      <!-- Android : Google Wallet -->
+      <div class="device-pane" id="pane-android" hidden>
+        <ol class="wallet-steps">
+          <li><span class="n">1</span><span><strong>Préparez Google Wallet</strong> (une minute, une seule fois) : l'application doit être installée, connectée à votre compte Google, et votre téléphone doit avoir un verrouillage d'écran (code, empreinte ou visage).
+            <span class="btn-row btn-row-tight"><a class="btn btn-ink btn-sm" id="btn-wallet-android" href="https://play.google.com/store/apps/details?id=com.google.android.apps.walletnfcrel" target="_blank" rel="noopener">Ouvrir ou installer Google Wallet</a></span></span></li>
+          <li><span class="n">2</span><span><strong>Ouvrez votre carte dans Chrome</strong>, pas depuis WhatsApp ou Messenger : acceptez les conditions, la carte s'affiche.
+            <span class="btn-row btn-row-tight"><a class="btn btn-primary btn-sm js-open-card" href="#" target="_blank" rel="noopener">Ouvrir ma carte</a></span></span></li>
+          <li><span class="n">3</span><span>Touchez <strong>« Add to Google Wallet »</strong> et laissez Google terminer : la carte apparaît dans Wallet.</span></li>
+          <li><span class="n">4</span><span>En station, approchez votre téléphone du terminal, comme avec une carte bancaire.</span></li>
+        </ol>
+      </div>
+
+      <!-- iPhone : ajout manuel dans Cartes -->
+      <div class="device-pane" id="pane-ios" hidden>
+        <ol class="wallet-steps">
+          <li><span class="n">1</span><span><strong>Ouvrez votre carte</strong> : acceptez les conditions, la carte s'affiche avec son numéro, sa date d'expiration et son cryptogramme. Gardez cette page ouverte.
+            <span class="btn-row btn-row-tight"><a class="btn btn-primary btn-sm js-open-card" href="#" target="_blank" rel="noopener">Ouvrir ma carte</a></span></span></li>
+          <li><span class="n">2</span><span>Ouvrez l'application <strong>Cartes</strong> (Apple Wallet), touchez <strong>+</strong>, puis <strong>Carte de débit ou de crédit</strong>, puis <strong>Saisir les informations manuellement</strong>.</span></li>
+          <li><span class="n">3</span><span>Recopiez le numéro, la date d'expiration et le cryptogramme affichés, puis votre nom. L'ajout automatique sur iPhone arrive ; en attendant, c'est cette saisie.</span></li>
+          <li><span class="n">4</span><span>En station, approchez votre iPhone du terminal, comme avec une carte bancaire.</span></li>
+        </ol>
+      </div>
+
+      <!-- Ordinateur : passer sur le téléphone -->
+      <div class="device-pane" id="pane-other" hidden>
+        <p class="lead-sm">La carte s'ajoute au portefeuille <strong>depuis votre téléphone</strong>. Scannez ce code avec l'appareil photo de votre téléphone, puis suivez les étapes Android ou iPhone.</p>
+        <div class="qr-box"><div id="qr-code" aria-label="QR code de votre lien d'activation"></div></div>
+        <div class="btn-row btn-row-tight">
+          <a class="btn btn-ghost btn-sm js-open-card" href="#" target="_blank" rel="noopener">Ouvrir ma carte ici quand même</a>
+        </div>
+      </div>
+
+      <div class="link-box">
+        <div class="link-box-label">Votre lien d'activation</div>
+        <div class="link-box-url" id="link-text"></div>
+        <div class="btn-row btn-row-tight">
+          <button class="btn btn-ink btn-sm" type="button" id="btn-copy-link">Copier le lien</button>
+          <button class="btn btn-ghost btn-sm" type="button" id="btn-share-link" hidden>Envoyer sur mon téléphone</button>
+        </div>
+        <p class="small muted" id="link-warning"></p>
+      </div>
+
       <div class="divider"></div>
       <p class="small muted" id="ready-support"></p>
       <div class="btn-row">
@@ -317,7 +359,7 @@
       <ol class="wallet-steps" style="margin-top:22px">
         <li><span class="n">1</span><span>Vous recevez une facture pro forma et le fichier modèle des salariés (nom, prénom, date de naissance, nationalité, e-mail, mobile).</span></li>
         <li><span class="n">2</span><span>Vous réglez par virement et nous renvoyez le fichier complété.</span></li>
-        <li><span class="n">3</span><span>À réception des fonds, chaque salarié reçoit sa carte par SMS et par e-mail.</span></li>
+        <li><span class="n">3</span><span>À réception des fonds, chaque salarié reçoit son lien d'activation par e-mail.</span></li>
       </ol>
       <div class="btn-row">
         <button class="btn btn-ghost" data-go="#/">Revenir à l'accueil</button>
@@ -340,6 +382,7 @@
   </div>
 </footer>
 
+<script src="/assets/qrcode.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

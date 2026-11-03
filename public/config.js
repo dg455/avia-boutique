@@ -55,6 +55,9 @@ window.SHOP_CONFIG = {
     contactEmail: "info@soshop.club"
   },
 
+  // Envoi du lien d'activation en plus de l'affichage à l'écran : à activer quand un service d'envoi est raccordé.
+  delivery: { sms: false, email: false },
+
   support: {
     phone: "0 811 880 200",
     phoneNote: "service client porteurs, prix d'un appel local",

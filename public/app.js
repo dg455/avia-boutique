@@ -166,6 +166,13 @@
         break;
       }
       case "#/ready": if (!state.result) { location.replace("#/"); break; } paintReady(); show("screen-ready"); break;
+      case "#/carte": {
+        // Arrivée par le QR code affiché sur un ordinateur : le lien d'activation est dans l'adresse, on guide sur le téléphone.
+        const u = q.get("u");
+        if (!u || !/^https:\/\//.test(u)) { location.replace("#/"); break; }
+        state.result = { mode: "real", redeemUrl: u, expiresIn: null, last4: null, fromQr: true };
+        paintReady(); show("screen-ready"); break;
+      }
       case "#/error": show("screen-error"); break;
       case "#/entreprise": show("screen-business"); break;
       case "#/entreprise/ok": show("screen-business-done"); break;
@@ -233,7 +240,7 @@
       `<div class="price-line"><span class="pl-label">${esc(CFG.brand.cardName)}</span><span class="pl-value">${money(p.faceCents)}</span></div>` +
       `<div class="price-line"><span class="pl-label">Remise ${CFG.discountPct} %</span><span class="pl-value">− ${money(p.faceCents - p.priceCents)}</span></div>` +
       `<div class="price-line is-total"><span class="pl-label">À payer</span><span class="pl-value">${money(p.priceCents)}</span></div>`;
-    $("#review-person").innerHTML = kv("Titulaire", `${q.first_name} ${q.last_name}`) + kv("E-mail", state.email) + kv("Mobile (lien d'activation)", maskPhone(q.dialing_code, q.mobile)) +
+    $("#review-person").innerHTML = kv("Titulaire", `${q.first_name} ${q.last_name}`) + kv("E-mail", state.email) + kv("Mobile", maskPhone(q.dialing_code, q.mobile)) +
       `<div class="kv"><a class="edit-link" href="#/details">Modifier</a></div>`;
     $("#f-terms").checked = false; $("#btn-pay").disabled = true;
     if (cancelled) { state.orderId = null; save(); }
@@ -311,7 +318,7 @@
       await new Promise((r) => setTimeout(r, 2000));
     }
     creating = false;
-    showError("La création prend plus de temps que prévu.", `Ne commandez pas une seconde carte : si elle a été créée, le lien vous arrive par SMS. Référence ${state.orderId.slice(0, 8).toUpperCase()}, service client ${CFG.support.phone}.`);
+    showError("La création prend plus de temps que prévu.", `Ne commandez pas une seconde carte : si elle a été créée, le service client vous remettra votre lien. Référence ${state.orderId.slice(0, 8).toUpperCase()}, service client ${CFG.support.phone}.`);
   }
   function errorText(j) {
     switch (j && j.code) {
@@ -344,18 +351,60 @@
     $("#ready-demo-notice").textContent = r.mode === "staging"
       ? "Plateforme de test : cette carte est une carte de test, non utilisable en station." + (r.paymentReleased ? " Votre paiement a été annulé, rien n'est débité." : "")
       : "Démonstration : cette carte n'est pas réelle." + (r.paymentReleased ? " Votre paiement a été annulé, rien n'est débité." : "");
-    $("#ready-lead").textContent = q
-      ? `Le lien d'activation a été envoyé par SMS au ${maskPhone(q.dialing_code, q.mobile)} et par e-mail à ${maskEmail(state.email)}.`
-      : "Le lien d'activation vous a été envoyé par SMS et par e-mail.";
+    const delivery = CFG.delivery || {};
+    const sent = [delivery.sms && q ? `par SMS au ${maskPhone(q.dialing_code, q.mobile)}` : "", delivery.email ? `par e-mail à ${maskEmail(state.email)}` : ""].filter(Boolean);
+    $("#ready-lead").textContent = sent.length
+      ? `Votre lien d'activation vous a aussi été envoyé ${sent.join(" et ")}. Il reste trois gestes pour mettre la carte dans votre téléphone.`
+      : "Il reste trois gestes pour mettre la carte dans votre téléphone. Suivez les étapes de votre appareil.";
     $("#cv-amount-2").textContent = money(p.faceCents);
     $("#cv-holder-2").textContent = q ? emboss(q.first_name, q.last_name) : "";
     $("#cv-last4").textContent = r.last4 ? "•••• " + r.last4 : "";
-    $("#btn-open-card").href = r.redeemUrl || "#";
+    const url = r.redeemUrl || "#";
+    $$(".js-open-card").forEach((a) => { a.href = url; });
     const mins = r.expiresIn ? Math.round(r.expiresIn / 60) : null;
-    $("#ready-meta").textContent = `Le lien ne s'ouvre qu'une seule fois${mins ? ` et reste valable ${mins >= 60 ? Math.round(mins / 60) + " h" : mins + " min"}` : ""}. Référence : ${(state.orderId || "").slice(0, 8).toUpperCase()}.`;
+    const validity = mins ? (mins >= 60 ? Math.round(mins / 60) + " h" : mins + " min") : null;
+    $("#ready-card").hidden = !!r.fromQr;
+    $("#ready-meta").textContent = r.fromQr ? "" : `Référence : ${(state.orderId || "").slice(0, 8).toUpperCase()}.`;
+    $("#link-text").textContent = url;
+    $("#link-warning").dataset.base = `Ce lien ne s'ouvre qu'une seule fois${validity ? ` et reste valable ${validity}` : ""}.`;
+    $("#link-warning").dataset.sent = sent.length ? "1" : "";
     $("#ready-support").textContent = `Une question sur votre carte ? Service client ${CFG.support.phone}, ${CFG.support.phoneNote}.`;
+    paintDevice(detectDevice(), url);
     state.orderId = null; state.payment = null; save();
   }
+  // Appareil du client : détecté, modifiable par les onglets.
+  function detectDevice() {
+    const ua = navigator.userAgent || "";
+    if (/android/i.test(ua)) return "android";
+    if (/iphone|ipad|ipod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) return "ios";
+    return "other";
+  }
+  function paintDevice(device, url) {
+    $$(".device-tab").forEach((b) => b.classList.toggle("is-active", b.dataset.device === device));
+    ["android", "ios", "other"].forEach((d) => { $("#pane-" + d).hidden = d !== device; });
+    if (device === "other" && url && url !== "#" && window.qrcode) {
+      try {
+        // Le QR code mène à cette page de guidage sur le téléphone, pas directement au lien (qui ne s'ouvre qu'une fois).
+        const guided = location.origin + location.pathname + "#/carte?u=" + encodeURIComponent(url);
+        const qr = window.qrcode(0, "M"); qr.addData(guided); qr.make();
+        $("#qr-code").innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
+      } catch (e) { $("#qr-code").textContent = ""; }
+    }
+    const share = $("#btn-share-link");
+    share.hidden = !(navigator.share && device === "other");
+    const w = $("#link-warning");
+    w.textContent = w.dataset.base + (w.dataset.sent ? "" : (device === "other" ? " Il n'est affiché qu'ici : copiez-le ou photographiez le QR code avant de quitter la page." : " Il n'est affiché qu'ici : copiez-le avant de quitter la page."));
+  }
+  $$(".device-tab").forEach((b) => b.addEventListener("click", () => paintDevice(b.dataset.device, $("#link-text").textContent)));
+  $("#btn-copy-link").addEventListener("click", async () => {
+    const url = $("#link-text").textContent, btn = $("#btn-copy-link");
+    try { await navigator.clipboard.writeText(url); btn.textContent = "Lien copié"; }
+    catch (e) { const r = document.createRange(); r.selectNodeContents($("#link-text")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = "Sélectionné : copiez-le"; }
+    setTimeout(() => { btn.textContent = "Copier le lien"; }, 2500);
+  });
+  $("#btn-share-link").addEventListener("click", async () => {
+    try { await navigator.share({ title: `${CFG.brand.cardName}`, text: "Votre lien d'activation (une seule ouverture) :", url: $("#link-text").textContent }); } catch (e) { /* annulé */ }
+  });
 
   // ----- Entreprise -----
   function bizTotals() {
