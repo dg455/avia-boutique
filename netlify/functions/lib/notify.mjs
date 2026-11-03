@@ -38,6 +38,26 @@ async function mailer(cfg) {
 }
 export function resetMailer() { mailerPromise = null; }
 
+// E-mail de test (sonde /api/mail-check) : même transport SMTP que les vrais envois, aucun secret dans la réponse.
+export async function sendTestMail({ env, to }) {
+  const cfg = deliveryConfig(env || process.env);
+  const base = { to, host: cfg.smtp ? cfg.smtp.host : null, port: cfg.smtp ? cfg.smtp.port : null, from: cfg.from ? cfg.from.email : null, enabled: cfg.email };
+  if (!cfg.email) return { ok: false, ...base, error: "E-mail non configuré (SMTP_HOST / MAIL_FROM) ou coupé (DELIVERY_EMAIL=false)" };
+  const when = new Date().toLocaleString("fr-FR", { timeZone: "Europe/Paris" });
+  const text = `E-mail de test envoyé par la boutique le ${when} (Europe/Paris).\nSi vous le lisez, l'envoi des liens d'activation par e-mail fonctionne.`;
+  try {
+    const t = await mailer(cfg);
+    const fromStr = cfg.from.name ? `"${cfg.from.name.replace(/"/g, "")}" <${cfg.from.email}>` : cfg.from.email;
+    const info = await t.sendMail({ from: fromStr, replyTo: cfg.replyTo ? cfg.replyTo.email : undefined, to, subject: "Test d'envoi — boutique AVIA", text, html: `<p>${text.replace("\n", "</p><p>")}</p>` });
+    console.log(JSON.stringify({ step: "mail-check", ok: true, to, id: info.messageId || null }));
+    return { ok: true, ...base, id: info.messageId || null, preview: cfg.smtp.host === "json" ? info.message : undefined };
+  } catch (err) {
+    const msg = String(err && err.message);
+    console.log(JSON.stringify({ step: "mail-check", ok: false, to, msg }));
+    return { ok: false, ...base, error: msg };
+  }
+}
+
 function parseAddress(s) {
   const m = String(s).match(/^\s*(?:"?([^"<]*)"?\s*)?<?([^<>\s]+@[^<>\s]+)>?\s*$/);
   if (!m) return null;

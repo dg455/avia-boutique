@@ -105,5 +105,5 @@ La plateforme émettrice n'envoie rien au porteur : le lien d'activation est ren
 - **E-mail (gratuit)** par SMTP — par exemple le compte Google Workspace de la boutique avec un mot de passe d'application : `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_USER=info@soshop.club`, `SMTP_PASS=<mot de passe d'application>`, `MAIL_FROM="AVIA by SoShop.Club <info@soshop.club>"`. Sans ces variables, aucun e-mail n'est envoyé et la page affiche seulement le lien et le QR code.
 - **SMS (payant, coupé par défaut)** via Brevo : `BREVO_API_KEY`, `SMS_SENDER=AVIA`, `DELIVERY_SMS=true`.
 - Le message contient un **lien court** `https://<boutique>/c/REF` (REF = référence de commande) qui mène à la page de guidage (Android / iPhone) portant le lien d'activation ; le lien d'activation lui-même ne s'ouvre qu'une fois. `SHOP_PUBLIC_ORIGIN` fixe l'origine de ces liens courts si elle diffère de celle des commandes.
-- `/api/health` indique `delivery.email` et `delivery.sms`.
+- `/api/health` indique `delivery.email` et `delivery.sms` ; `/api/mail-check` (porte d'entrée ou `?code=`) envoie un e-mail de test à une adresse soshop.club (`?to=`, défaut damien@soshop.club) sans émettre de carte.
 - `POST /api/resend-link { orderId }` renvoie l'e-mail à l'adresse de la commande (bouton « renvoyez l'e-mail » sous le lien ; 3 renvois au plus, une minute entre deux).
