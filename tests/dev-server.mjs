@@ -10,23 +10,35 @@ const types = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", "
 const fns = {
   "/api/issue-card": () => import("../netlify/functions/issue-card.mjs"),
   "/api/health": () => import("../netlify/functions/health.mjs"),
-  "/api/payment-session": () => import("../netlify/functions/payment-session.mjs")
+  "/api/payment-session": () => import("../netlify/functions/payment-session.mjs"),
+  "/api/stripe-webhook": () => import("../netlify/functions/stripe-webhook.mjs"),
+  "/api/issue-worker": () => import("../netlify/functions/issue-worker-background.mjs"),
+  "/api/order-status": () => import("../netlify/functions/order-status.mjs")
 };
-const cookie = "shop_gate=" + createHash("sha256").update("shop-gate|" + (process.env.SHOP_ACCESS_CODE || "Avia2026")).digest("hex");
 
-createServer(async (req, res) => {
-  const url = new URL(req.url, "http://localhost");
-  if (fns[url.pathname]) {
-    const chunks = []; for await (const c of req) chunks.push(c);
-    const { default: handler } = await fns[url.pathname]();
-    const r = await handler(new Request("http://localhost:8788" + req.url, { method: req.method, headers: { "content-type": "application/json", cookie }, body: req.method === "POST" ? Buffer.concat(chunks) : undefined }), {});
-    res.writeHead(r.status, Object.fromEntries(r.headers)); res.end(Buffer.from(await r.arrayBuffer())); return;
-  }
-  if (req.method === "POST" && url.pathname === "/") { res.writeHead(200); res.end("ok"); return; } // formulaire entreprise
-  let p = url.pathname === "/" ? "/index.html" : url.pathname;
-  if (p === "/gate") p = "/gate.html";
-  try {
-    const file = join(ROOT, p); await stat(file);
-    res.writeHead(200, { "content-type": types[extname(file)] || "application/octet-stream" }); res.end(await readFile(file));
-  } catch { res.writeHead(404); res.end("not found"); }
-}).listen(8788, () => console.log("dev server: http://localhost:8788"));
+export function start(port = 8788) {
+  const cookie = "shop_gate=" + createHash("sha256").update("shop-gate|" + (process.env.SHOP_ACCESS_CODE || "Avia2026")).digest("hex");
+  const server = createServer(async (req, res) => {
+    const url = new URL(req.url, "http://localhost");
+    if (fns[url.pathname]) {
+      const chunks = []; for await (const c of req) chunks.push(c);
+      const { default: handler } = await fns[url.pathname]();
+      const headers = { ...req.headers, cookie };
+      const origin = `http://127.0.0.1:${server.address().port}`;
+      const r = await handler(new Request(origin + req.url, { method: req.method, headers, body: req.method === "POST" ? Buffer.concat(chunks) : undefined }), {});
+      res.writeHead(r.status, Object.fromEntries(r.headers)); res.end(Buffer.from(await r.arrayBuffer())); return;
+    }
+    if (req.method === "POST" && url.pathname === "/") { res.writeHead(200); res.end("ok"); return; } // formulaire entreprise
+    let p = url.pathname === "/" ? "/index.html" : url.pathname;
+    if (p === "/gate") p = "/gate.html";
+    try {
+      const file = join(ROOT, p); await stat(file);
+      res.writeHead(200, { "content-type": types[extname(file)] || "application/octet-stream" }); res.end(await readFile(file));
+    } catch { res.writeHead(404); res.end("not found"); }
+  });
+  return new Promise((ok) => server.listen(port, "127.0.0.1", () => ok(server)));
+}
+
+if (process.argv[1] && process.argv[1].endsWith("dev-server.mjs")) {
+  start(8788).then((s) => console.log(`dev server: http://localhost:${s.address().port}`));
+}

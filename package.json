@@ -5,11 +5,13 @@
   "description": "Boutique carte virtuelle (marque blanche) — site statique + fonctions Netlify",
   "type": "module",
   "scripts": {
-    "check": "node --check netlify/functions/issue-card.mjs && node --check netlify/functions/health.mjs && node --check netlify/functions/payment-session.mjs && node --check netlify/functions/lib/middleware.mjs",
-    "test": "node tests/issue-card.test.mjs"
+    "check": "for f in netlify/functions/*.mjs netlify/functions/lib/*.mjs; do node --check $f || exit 1; done",
+    "test": "node tests/functions.test.mjs"
   },
   "dependencies": {
-    "undici": "^6.21.0"
+    "@netlify/blobs": "^8.2.0",
+    "stripe": "^17.7.0",
+    "undici": "^6.29.1"
   },
   "engines": {
     "node": ">=18"

@@ -1,5 +1,6 @@
 // GET /api/health — état de la configuration, sans aucun secret.
 import { middlewareConfig } from "./lib/middleware.mjs";
+import { paymentProvider } from "./lib/stripe.mjs";
 
 export const config = { path: "/api/health" };
 
@@ -10,7 +11,7 @@ export default async () => {
     issuing: cfg.enabled ? "real" : "simulated",
     middlewareHost: cfg.enabled ? new URL(cfg.base).host : null,
     outboundProxy: !!cfg.proxyUrl,
-    payment: process.env.PAYMENT_PROVIDER || "simulated",
+    payment: paymentProvider(),
     simulatedPaymentAllowed: process.env.ALLOW_SIMULATED_PAYMENT === "true",
     gate: (process.env.SHOP_ACCESS_CODE || "Avia2026") === "open" ? "open" : "code"
   };

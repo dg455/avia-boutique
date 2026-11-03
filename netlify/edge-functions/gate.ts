@@ -9,7 +9,11 @@
 
 import type { Context } from "https://edge.netlify.com";
 
-const OPEN_PATHS = new Set(["/gate", "/gate.html", "/styles.css", "/config.js", "/favicon.ico", "/robots.txt"]);
+const OPEN_PATHS = new Set([
+  "/gate", "/gate.html", "/styles.css", "/config.js", "/favicon.ico", "/robots.txt",
+  "/api/stripe-webhook",   // notifications Stripe (signature vérifiée dans la fonction)
+  "/api/issue-worker"      // fonction d'arrière-plan (jeton interne vérifié dans la fonction)
+]);
 const OPEN_PREFIXES = ["/assets/", "/.netlify/"];
 
 async function token(code: string): Promise<string> {

@@ -138,16 +138,24 @@
   }
   function go(hash) { if (location.hash === hash) route(); else location.hash = hash; }
   function route() {
-    const h = location.hash || "#/";
+    const full = location.hash || "#/";
+    const [h, qs] = full.split("?");
+    const q = new URLSearchParams(qs || "");
     const guardPerson = () => { if (!state.person) { location.replace("#/email"); return false; } return true; };
     switch (h) {
       case "#/": show("screen-home"); break;
       case "#/email": $("#f-email").value = state.email || ""; show("screen-email"); break;
       case "#/known": if (!state.person) { location.replace("#/email"); break; } paintKnown(); show("screen-known"); break;
       case "#/details": fillDetails(); show("screen-details"); break;
-      case "#/review": if (guardPerson()) { paintReview(); show("screen-review"); } break;
+      case "#/review": if (guardPerson()) { paintReview(q.get("cancel") === "1"); show("screen-review"); } break;
       case "#/pay": if (guardPerson()) { paintPay(); show("screen-pay"); } break;
-      case "#/creating": if (guardPerson()) { show("screen-creating"); runCreation(); } break;
+      case "#/creating": {
+        // Retour du paiement hébergé : l'identifiant de commande est dans l'URL, la session peut avoir été perdue.
+        const fromPayment = q.get("order");
+        if (fromPayment) { state.orderId = fromPayment; save(); show("screen-creating"); runCreation(true); break; }
+        if (guardPerson()) { show("screen-creating"); runCreation(false); }
+        break;
+      }
       case "#/ready": if (!state.result) { location.replace("#/"); break; } paintReady(); show("screen-ready"); break;
       case "#/error": show("screen-error"); break;
       case "#/entreprise": show("screen-business"); break;
@@ -211,23 +219,31 @@
   // ----- Récapitulatif -----
   const kv = (k, v) => `<div class="kv"><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`;
   function frDate(iso) { const [y, m, d] = (iso || "").split("-"); return d && m && y ? `${d}/${m}/${y}` : ""; }
-  function paintReview() {
+  let cancelNotice = false;
+  function paintReview(cancelled) {
     const p = product(), q = state.person;
     $("#review-order").innerHTML =
+      (cancelled ? `<div class="notice notice-demo" style="margin:12px 0 4px">Paiement annulé. Rien n'a été débité.</div>` : "") +
       `<div class="price-line"><span class="pl-label">${esc(CFG.brand.cardName)}</span><span class="pl-value">${money(p.faceCents)}</span></div>` +
       `<div class="price-line"><span class="pl-label">Remise ${CFG.discountPct} %</span><span class="pl-value">− ${money(p.faceCents - p.priceCents)}</span></div>` +
       `<div class="price-line is-total"><span class="pl-label">À payer</span><span class="pl-value">${money(p.priceCents)}</span></div>`;
     $("#review-person").innerHTML = kv("Titulaire", `${q.first_name} ${q.last_name}`) + kv("E-mail", state.email) + kv("Mobile (lien d'activation)", maskPhone(q.dialing_code, q.mobile)) +
       `<div class="kv"><a class="edit-link" href="#/details">Modifier</a></div>`;
     $("#f-terms").checked = false; $("#btn-pay").disabled = true;
+    if (cancelled) { state.orderId = null; save(); }
   }
   $("#f-terms").addEventListener("change", (e) => { $("#btn-pay").disabled = !e.target.checked; });
   $("#btn-pay").addEventListener("click", () => {
-    if (CFG.payment.provider === "paytently") startHostedPayment(); else go("#/pay");
+    if (provider() === "simulated") go("#/pay"); else startHostedPayment();
   });
 
   // ----- Paiement -----
-  function paintPay() { $("#pay-demo-notice").hidden = CFG.payment.provider !== "simulated"; }
+  // Le prestataire effectif est décidé côté serveur (variables d'environnement) ; config.js sert de repli.
+  let serverProvider = null;
+  function provider() { return serverProvider || CFG.payment.provider || "simulated"; }
+  fetch("/api/health", { cache: "no-store" }).then((r) => r.ok ? r.json() : null).then((h) => { if (h && h.payment) serverProvider = h.payment; }).catch(() => {});
+
+  function paintPay() { $("#pay-demo-notice").hidden = provider() !== "simulated"; }
   $("#form-pay").addEventListener("submit", (e) => {
     e.preventDefault();
     // Démonstration : aucune donnée de carte bancaire n'est envoyée ni conservée.
@@ -235,43 +251,69 @@
     save(); go("#/creating");
   });
   async function startHostedPayment() {
-    state.orderId = state.orderId || uuid(); save();
+    state.orderId = uuid(); save(); // nouvelle commande à chaque passage en caisse
+    const btn = $("#btn-pay"); btn.disabled = true;
     try {
-      const r = await fetch("/api/payment-session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId: state.orderId, product: product(), email: state.email }) });
-      const j = await r.json();
-      if (r.ok && j.redirectUrl) { location.href = j.redirectUrl; return; }
-      showError(j.error || "Le paiement n'est pas disponible pour le moment.", "Réessayez dans quelques minutes.");
-    } catch (err) { showError("Le paiement n'est pas disponible pour le moment.", "Vérifiez votre connexion, puis réessayez."); }
+      const body = { orderId: state.orderId, product: product(), email: state.email, person: state.person };
+      const r = await fetch("/api/payment-session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && j.redirectUrl) { remember(state.email, state.person); location.href = j.redirectUrl; return; }
+      btn.disabled = false;
+      showError(j.error || "Le paiement n'est pas disponible pour le moment.", "Rien n'a été débité. Réessayez dans quelques minutes.");
+    } catch (err) { btn.disabled = false; showError("Le paiement n'est pas disponible pour le moment.", "Vérifiez votre connexion, puis réessayez."); }
   }
 
   // ----- Création -----
+  // Deux chemins : paiement simulé (POST /api/issue-card, puis suivi) ou retour du paiement hébergé (suivi seul).
   let creating = false;
-  async function runCreation() {
+  async function runCreation(fromPayment) {
     if (creating) return; creating = true;
-    const items = $$("#creating-list li"); items.forEach((li) => { li.className = ""; });
+    const items = $$("#creating-list li"); items.forEach((li) => { li.className = ""; li.querySelector(".dot").textContent = ""; });
     const mark = (i, cls) => { items[i].className = cls; items[i].querySelector(".dot").textContent = cls === "is-done" ? "✓" : ""; };
+    const fail = (j) => { creating = false; showError(errorText(j), errorHelp(j)); };
     mark(0, "is-doing");
-    const timers = [setTimeout(() => { mark(0, "is-done"); mark(1, "is-doing"); }, 1400), setTimeout(() => { mark(1, "is-done"); mark(2, "is-doing"); }, 3200)];
     state.orderId = state.orderId || uuid(); save();
-    try {
-      const body = { orderId: state.orderId, product: product(), email: state.email, person: state.person, payment: state.payment || { method: "simulated" } };
-      const r = await fetch("/api/issue-card", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      const j = await r.json().catch(() => ({}));
-      timers.forEach(clearTimeout);
-      if (!r.ok || !j.ok) { creating = false; return showError(errorText(j), errorHelp(j)); }
-      mark(0, "is-done"); mark(1, "is-done"); mark(2, "is-done"); mark(3, "is-doing");
-      state.result = j; remember(state.email, state.person); save();
-      setTimeout(() => { mark(3, "is-done"); creating = false; go("#/ready"); }, 900);
-    } catch (err) {
-      timers.forEach(clearTimeout); creating = false;
-      showError("La connexion a été interrompue pendant la création.", "Ne payez pas une seconde fois. Réessayez : si la carte a déjà été créée, elle vous sera simplement renvoyée.");
+
+    if (!fromPayment) {
+      try {
+        const body = { orderId: state.orderId, product: product(), email: state.email, person: state.person, payment: state.payment || { method: "simulated" } };
+        const r = await fetch("/api/issue-card", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || !j.ok) return fail(j);
+      } catch (err) {
+        creating = false;
+        return showError("La connexion a été interrompue pendant la création.", "Ne payez pas une seconde fois. Réessayez : si la carte a déjà été créée, elle vous sera simplement renvoyée.");
+      }
     }
+
+    // Suivi de la commande jusqu'à la carte (ou l'échec). Au plus 3 minutes.
+    const t0 = Date.now(); let seenIssuing = false;
+    while (Date.now() - t0 < 180000) {
+      let j = null;
+      try { const r = await fetch(`/api/order-status?orderId=${encodeURIComponent(state.orderId)}`, { cache: "no-store" }); j = await r.json().catch(() => ({})); if (r.status === 401) return fail({ code: "UNAUTHORIZED" }); } catch (e) { j = null; }
+      if (j && j.status === "issued") {
+        mark(0, "is-done"); mark(1, "is-done"); mark(2, "is-done"); mark(3, "is-doing");
+        state.result = { mode: j.mode, redeemUrl: j.redeemUrl, expiresIn: j.expiresIn, last4: j.last4 };
+        if (state.person) remember(state.email, state.person);
+        save();
+        setTimeout(() => { mark(3, "is-done"); creating = false; go("#/ready"); }, 900);
+        return;
+      }
+      if (j && j.status === "failed") return fail({ code: j.code });
+      if (j && (j.status === "issuing") && !seenIssuing) { seenIssuing = true; mark(0, "is-done"); mark(1, "is-doing"); }
+      if (seenIssuing && Date.now() - t0 > 6000) { mark(1, "is-done"); mark(2, "is-doing"); }
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+    creating = false;
+    showError("La création prend plus de temps que prévu.", `Ne commandez pas une seconde carte : si elle a été créée, le lien vous arrive par SMS. Référence ${state.orderId.slice(0, 8).toUpperCase()}, service client ${CFG.support.phone}.`);
   }
   function errorText(j) {
     switch (j && j.code) {
       case "DUPLICATE": return "Une carte a déjà été créée pour ce numéro de mobile au cours des 30 derniers jours.";
       case "REFUSED": return "L'émetteur n'a pas pu créer cette carte.";
+      case "UPSTREAM": return "L'émetteur est momentanément indisponible.";
       case "LOAD_PENDING": return "La carte est créée mais son chargement est en cours de vérification.";
+      case "PAYMENT_FAILED": return "Le paiement n'a pas abouti.";
       case "UNAUTHORIZED": return "Votre session a expiré.";
       default: return (j && j.error) || "Une erreur technique est survenue.";
     }
@@ -279,26 +321,29 @@
   function errorHelp(j) {
     switch (j && j.code) {
       case "DUPLICATE": return "Le programme autorise une carte par personne et par 30 jours. Vous n'avez pas été débité.";
-      case "REFUSED": return `Vous n'avez pas été débité. Pour toute question, contactez le service client au ${CFG.support.phone}.`;
+      case "REFUSED": case "UPSTREAM": return `Vous n'avez pas été débité. Pour toute question, contactez le service client au ${CFG.support.phone}.`;
       case "LOAD_PENDING": return `Ne commandez pas une seconde carte. Contactez le service client au ${CFG.support.phone} avec la référence ${(state.orderId || "").slice(0, 8).toUpperCase()}.`;
+      case "PAYMENT_FAILED": return "Rien n'a été débité. Vous pouvez recommencer la commande.";
       case "UNAUTHORIZED": return "Rechargez la page et saisissez à nouveau le code d'accès.";
       default: return "Vous n'avez pas été débité. Réessayez dans quelques minutes.";
     }
   }
   function showError(text, help) { $("#error-text").textContent = text; $("#error-help").textContent = help || ""; go("#/error"); }
-  $("#btn-retry").addEventListener("click", () => go("#/creating"));
+  $("#btn-retry").addEventListener("click", () => { if (state.orderId) go(`#/creating?order=${state.orderId}`); else go("#/"); });
 
   // ----- Carte prête -----
   function paintReady() {
     const r = state.result, p = product(), q = state.person;
     $("#ready-demo-notice").hidden = r.mode !== "simulated";
-    $("#ready-lead").textContent = `Le lien d'activation a été envoyé par SMS au ${maskPhone(q.dialing_code, q.mobile)} et par e-mail à ${maskEmail(state.email)}.`;
+    $("#ready-lead").textContent = q
+      ? `Le lien d'activation a été envoyé par SMS au ${maskPhone(q.dialing_code, q.mobile)} et par e-mail à ${maskEmail(state.email)}.`
+      : "Le lien d'activation vous a été envoyé par SMS et par e-mail.";
     $("#cv-amount-2").textContent = money(p.faceCents);
-    $("#cv-holder-2").textContent = emboss(q.first_name, q.last_name);
+    $("#cv-holder-2").textContent = q ? emboss(q.first_name, q.last_name) : "";
     $("#cv-last4").textContent = r.last4 ? "•••• " + r.last4 : "";
     $("#btn-open-card").href = r.redeemUrl || "#";
     const mins = r.expiresIn ? Math.round(r.expiresIn / 60) : null;
-    $("#ready-meta").textContent = `Le lien ne s'ouvre qu'une seule fois${mins ? ` et reste valable ${mins >= 60 ? Math.round(mins / 60) + " h" : mins + " min"}` : ""}. Référence : ${state.orderId.slice(0, 8).toUpperCase()}.`;
+    $("#ready-meta").textContent = `Le lien ne s'ouvre qu'une seule fois${mins ? ` et reste valable ${mins >= 60 ? Math.round(mins / 60) + " h" : mins + " min"}` : ""}. Référence : ${(state.orderId || "").slice(0, 8).toUpperCase()}.`;
     $("#ready-support").textContent = `Une question sur votre carte ? Service client ${CFG.support.phone}, ${CFG.support.phoneNote}.`;
     state.orderId = null; state.payment = null; save();
   }

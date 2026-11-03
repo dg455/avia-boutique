@@ -16,10 +16,16 @@ public/                 site (statique)
   cg.html               conditions générales du porteur, données personnelles
   demo-carte.html       page carte de démonstration (mode simulation uniquement)
 netlify/functions/
-  issue-card.mjs        POST /api/issue-card : création + chargement de la carte
-  health.mjs            GET  /api/health : état de la configuration (sans secret)
-  payment-session.mjs   POST /api/payment-session : paiement hébergé (à brancher)
-  lib/middleware.mjs    client du middleware (création client + carte, chargement)
+  issue-card.mjs              POST /api/issue-card : commande avec paiement simulé (démonstration, tests)
+  payment-session.mjs         POST /api/payment-session : enregistre la commande, ouvre Stripe Checkout
+  stripe-webhook.mjs          POST /api/stripe-webhook : paiement autorisé → déclenche l'émission
+  issue-worker-background.mjs POST /api/issue-worker : émission en arrière-plan, puis capture ou annulation du paiement
+  order-status.mjs            GET  /api/order-status : avancement d'une commande (suivi par la boutique)
+  health.mjs                  GET  /api/health : état de la configuration (sans secret)
+  lib/middleware.mjs          client du middleware (création client + carte, chargement)
+  lib/issue.mjs               émission (simulation ou réel), catalogue serveur, validation
+  lib/orders.mjs              commandes (Netlify Blobs en production, fichier local en test)
+  lib/stripe.mjs              client Stripe, prestataire effectif, jeton interne
 netlify/edge-functions/
   gate.ts               porte d'entrée : tout le site derrière un code d'accès
 tests/                  test local des fonctions, serveur de développement
@@ -31,7 +37,9 @@ docs/                   notes techniques
 | | Émission | Paiement |
 |---|---|---|
 | **Simulation** (aucune variable `MW_*`) | identifiants fictifs, lien vers `demo-carte.html` | formulaire fictif, aucun débit |
-| **Réel** (`MW_BASE_URL` renseignée) | appels au middleware | `PAYMENT_PROVIDER=paytently` (à brancher) ; un paiement simulé est refusé sauf `ALLOW_SIMULATED_PAYMENT=true` (tests de production) |
+| **Réel** (`MW_BASE_URL` renseignée) | appels au middleware | `PAYMENT_PROVIDER=stripe` (Stripe Checkout) ou `paytently` (à brancher) ; un paiement simulé est refusé sauf `ALLOW_SIMULATED_PAYMENT=true` (tests de production) |
+
+Paiement réel : autorisation seule à la caisse, carte créée et chargée, puis capture ; création refusée → autorisation annulée, zéro débit. Une commande se suit sur `/api/order-status` : `pending` → `issuing` → `issued` ou `failed`.
 
 Le mode courant se lit sur `/api/health`.
 
@@ -46,7 +54,13 @@ Le mode courant se lit sur `/api/health`.
 | `MW_CARD_STYLE`, `MW_ACCOUNT_NAME` | style de carte (`01`) et nom du compte (`Voucher`) |
 | `OUTBOUND_PROXY_URL` | proxy HTTP à IP fixe, si le middleware exige une liste blanche d'IP |
 | `ALLOW_SIMULATED_PAYMENT` | `true` pour émettre sans paiement en mode réel (tests seulement) |
-| `PAYMENT_PROVIDER` | `simulated` (défaut) ou `paytently` |
+| `PAYMENT_PROVIDER` | `simulated` (défaut), `stripe` ou `paytently` |
+| `STRIPE_SECRET_KEY` | clé API Stripe (clé restreinte : Checkout Sessions, PaymentIntents, Refunds en écriture) |
+| `STRIPE_WEBHOOK_SECRET` | secret de signature du point de terminaison webhook |
+| `STRIPE_DESCRIPTOR_SUFFIX` | libellé sur le relevé bancaire du client (défaut `CARTE AVIA`) |
+| `SHOP_CARD_NAME` | nom du produit sur la page de paiement (défaut `Carte carburant AVIA`) |
+| `PRODUCTS_JSON` | catalogue serveur si différent de celui du code (`[{"id","faceCents","priceCents"}]`) |
+| `INTERNAL_TOKEN` | jeton de la fonction d'arrière-plan (dérivé du code d'accès si absent) |
 
 ## Déploiement
 
@@ -55,7 +69,15 @@ Le mode courant se lit sur `/api/health`.
 3. Déployer. La porte d'entrée s'applique à tout le site ; les fonctions `/api/*` exigent le même cookie.
 4. Domaine : ajouter le sous-domaine voulu dans **Domain management**, puis le CNAME chez le registrar.
 
-Chaque `git push` sur `main` redéploie. Le formulaire entreprise est un formulaire Netlify (`commande-entreprise`) : les demandes apparaissent dans **Forms**, où l'on peut activer une notification par e-mail.
+Chaque `git push` sur `main` redéploie.
+
+### Stripe (période bêta)
+
+1. Stripe → Developers → API keys → **Create restricted key** : Checkout Sessions *write*, PaymentIntents *write*, Refunds *write*. La coller dans `STRIPE_SECRET_KEY`.
+2. Stripe → Developers → Webhooks → **Add endpoint** : `https://<site>/api/stripe-webhook`, événements `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`. Coller le *signing secret* dans `STRIPE_WEBHOOK_SECRET`.
+3. `PAYMENT_PROVIDER=stripe`, puis redéployer. `/api/health` doit répondre `"payment":"stripe"`.
+
+Le compte Stripe encaisse au nom de son titulaire : le libellé sur le relevé du client sera celui du compte suivi du suffixe `STRIPE_DESCRIPTOR_SUFFIX`. Les commandes et leurs résultats sont dans Netlify Blobs (magasin `orders`). Le formulaire entreprise est un formulaire Netlify (`commande-entreprise`) : les demandes apparaissent dans **Forms**, où l'on peut activer une notification par e-mail.
 
 ## Tests en local
 

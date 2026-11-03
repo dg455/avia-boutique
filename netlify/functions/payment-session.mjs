@@ -1,28 +1,76 @@
-// POST /api/payment-session — ouvre une session de paiement hébergée (Paytently).
+// POST /api/payment-session — enregistre la commande et ouvre une session de paiement hébergée.
 //
-// À brancher dès réception de la documentation marchand. Flux prévu :
-//   1. la boutique appelle cette fonction avec l'identifiant de commande, le montant et l'e-mail ;
-//   2. la fonction crée la session chez le prestataire et renvoie redirectUrl ;
-//   3. le client paie sur la page hébergée (aucune donnée de carte bancaire ne transite par la boutique) ;
-//   4. le prestataire notifie /api/payment-webhook (à créer), qui déclenche l'émission puis la capture ;
-//      création refusée → annulation de l'autorisation, aucun débit.
+// Prestataire choisi par PAYMENT_PROVIDER :
+//   - stripe     : Stripe Checkout, autorisation seule (capture après émission de la carte ; annulation si refus → zéro débit) ;
+//   - paytently  : à brancher dès réception de la documentation marchand (même principe) ;
+//   - simulated  : pas de session, la boutique utilise /api/issue-card.
 //
-// Variables prévues : PAYMENT_PROVIDER=paytently, PAYTENTLY_API_URL, PAYTENTLY_API_KEY, PAYTENTLY_WEBHOOK_SECRET.
+// Les données du client sont enregistrées côté serveur (magasin « orders ») : seul l'identifiant de commande
+// voyage dans la session de paiement et dans l'URL de retour.
+
+import { gateOk, json } from "./lib/http.mjs";
+import { validateOrder, catalogProduct } from "./lib/issue.mjs";
+import { saveOrder } from "./lib/orders.mjs";
+import { getStripe, paymentProvider } from "./lib/stripe.mjs";
 
 export const config = { path: "/api/payment-session" };
 
 export default async (request) => {
-  if (request.method !== "POST") {
-    return new Response(JSON.stringify({ ok: false, error: "Méthode non autorisée." }), { status: 405, headers: { "content-type": "application/json; charset=utf-8" } });
+  if (request.method !== "POST") return json(405, { ok: false, error: "Méthode non autorisée." });
+  if (!gateOk(request, process.env)) return json(401, { ok: false, code: "UNAUTHORIZED", error: "Code d'accès requis." });
+
+  let body;
+  try { body = await request.json(); } catch { return json(400, { ok: false, error: "Corps de requête invalide." }); }
+  const errors = validateOrder(body);
+  if (errors.length) return json(400, { ok: false, code: "INVALID", error: "Informations incomplètes : " + errors.join(", ") });
+  const product = catalogProduct(body);
+  if (!product) return json(400, { ok: false, code: "INVALID", error: "Produit inconnu." });
+
+  const provider = paymentProvider();
+  const origin = new URL(request.url).origin;
+  const orderId = body.orderId;
+  const email = body.email.trim().toLowerCase();
+
+  if (provider === "stripe") {
+    const stripe = getStripe();
+    const face = product.faceCents / 100;
+    const cardName = process.env.SHOP_CARD_NAME || "Carte carburant AVIA";
+    let session;
+    try {
+      session = await stripe.checkout.sessions.create({
+        mode: "payment",
+        locale: "fr",
+        customer_email: email,
+        client_reference_id: orderId,
+        line_items: [{
+          quantity: 1,
+          price_data: {
+            currency: "eur",
+            unit_amount: product.priceCents,
+            product_data: { name: `${cardName} ${face} €`, description: `Carte virtuelle créditée de ${face} €, valable 12 mois` }
+          }
+        }],
+        payment_intent_data: {
+          capture_method: "manual",
+          metadata: { orderId },
+          statement_descriptor_suffix: (process.env.STRIPE_DESCRIPTOR_SUFFIX || "CARTE AVIA").slice(0, 22)
+        },
+        metadata: { orderId },
+        success_url: `${origin}/#/creating?order=${orderId}`,
+        cancel_url: `${origin}/#/review?cancel=1`,
+        expires_at: Math.floor(Date.now() / 1000) + 30 * 60
+      });
+    } catch (err) {
+      console.log(JSON.stringify({ step: "stripe-session", orderId, fail: String(err && err.message) }));
+      return json(502, { ok: false, code: "PAYMENT_UNAVAILABLE", error: "Le paiement n'est pas disponible pour le moment." });
+    }
+    await saveOrder({ orderId, status: "pending", payment: "stripe", sessionId: session.id, product, email, person: body.person, origin, createdAt: new Date().toISOString() });
+    return json(200, { ok: true, provider, redirectUrl: session.url });
   }
-  const provider = process.env.PAYMENT_PROVIDER || "simulated";
-  if (provider !== "paytently" || !process.env.PAYTENTLY_API_KEY) {
-    return new Response(JSON.stringify({ ok: false, code: "NOT_CONFIGURED", error: "Le paiement en ligne n'est pas encore activé sur cette boutique." }), {
-      status: 501, headers: { "content-type": "application/json; charset=utf-8" }
-    });
+
+  if (provider === "paytently") {
+    return json(501, { ok: false, code: "NOT_IMPLEMENTED", error: "Intégration du prestataire en attente de sa documentation." });
   }
-  // Intégration à écrire avec la documentation du prestataire.
-  return new Response(JSON.stringify({ ok: false, code: "NOT_IMPLEMENTED", error: "Intégration du prestataire en attente de sa documentation." }), {
-    status: 501, headers: { "content-type": "application/json; charset=utf-8" }
-  });
+
+  return json(400, { ok: false, code: "NO_HOSTED_PAYMENT", error: "Aucun paiement en ligne n'est activé sur cette boutique." });
 };
