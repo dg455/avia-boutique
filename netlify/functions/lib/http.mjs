@@ -1,3 +1,4 @@
+// (vérification du déploiement : ce commentaire force le ré-envoi de toutes les fonctions)
 // Petits utilitaires partagés par les fonctions.
 import { createHash } from "node:crypto";
 
