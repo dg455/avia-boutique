@@ -139,9 +139,14 @@
   // Trace d'étape (audience) : sans cookie ni donnée personnelle, identifiant de session volatil, jamais bloquant.
   const sid = (() => { try { let v = sessionStorage.getItem("shop_sid"); if (!v) { v = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, "0")).join(""); sessionStorage.setItem("shop_sid", v); } return v; } catch (e) { return "s" + Math.random().toString(16).slice(2, 18); } })();
   let refSent = false;
+  // Commande à joindre aux traces une fois l'écran « carte prête » affiché (state.orderId y est effacé) ou à l'arrivée
+  // par le lien e-mail (/c/REF → #/carte?u=…&o=REF) : c'est ce qui dit au back-office qu'une carte payée a été ouverte.
+  let traceOrder = null;
+  // E-mail masqué comme le fait le serveur (j***n@domaine) : jamais l'adresse en clair dans une trace.
+  const traceMask = (e) => { const [u, d] = String(e || "").split("@"); return u && d ? (u.length > 2 ? u[0] + "***" + u[u.length - 1] : u[0] + "***") + "@" + d : undefined; };
   function trace(screen, extra) {
     try {
-      const payload = { sid, screen, orderId: state.orderId || undefined, ...(extra || {}) };
+      const payload = { sid, screen, orderId: state.orderId || traceOrder || undefined, em: traceMask(state.email), ...(extra || {}) };
       if (!refSent && document.referrer) { payload.ref = document.referrer.slice(0, 120); refSent = true; }
       const body = JSON.stringify(payload);
       if (navigator.sendBeacon && navigator.sendBeacon("/api/trace", new Blob([body], { type: "application/json" }))) return;
@@ -186,6 +191,7 @@
         // Arrivée par le QR code affiché sur un ordinateur : le lien d'activation est dans l'adresse, on guide sur le téléphone.
         const u = q.get("u");
         if (!u || !/^https:\/\//.test(u)) { location.replace("#/"); break; }
+        if (/^[A-Za-z0-9]{8}$/.test(q.get("o") || "")) traceOrder = q.get("o").toUpperCase();
         state.result = { mode: "real", redeemUrl: u, expiresIn: null, last4: null, fromQr: true };
         paintReady(); show("screen-ready"); break;
       }
@@ -428,6 +434,7 @@
     paintDevice(detectDevice(), url);
     $("#resend-wrap").hidden = !(delivery.email && !r.fromQr && state.orderId);
     $("#btn-resend").dataset.orderId = state.orderId || ""; $("#btn-resend").textContent = "renvoyez l'e-mail";
+    if (state.orderId) traceOrder = state.orderId; // les gestes sur le lien (Wallet, ouverture) restent rattachés à la commande
     state.orderId = null; state.payment = null; save();
   }
   // Appareil du client : détecté, modifiable par les onglets.
@@ -484,6 +491,8 @@
   $("#btn-wallet-android").addEventListener("click", () => { trace("wallet-step1"); setTimeout(setWalletReady, 800); }); // après le départ vers Wallet / le Play Store
   $("#btn-wallet-ready").addEventListener("click", setWalletReady);
   $("#btn-android-open").addEventListener("click", (e) => { if (!walletReady()) { e.preventDefault(); $("#btn-wallet-android").focus(); return; } trace("wallet-open"); });
+  // iPhone et ordinateur : ouverture du lien (à usage unique) hors Google Wallet — tracée pour savoir que la carte a été ouverte.
+  $$(".js-open-card").forEach((a) => { if (a.id !== "btn-android-open") a.addEventListener("click", () => trace("link-open")); });
   $("#btn-copy-link").addEventListener("click", async () => {
     const url = $("#link-text").textContent, btn = $("#btn-copy-link");
     try { await navigator.clipboard.writeText(url); btn.textContent = "Lien copié"; }
