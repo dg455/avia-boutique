@@ -15,7 +15,7 @@ public/                 site (statique)
   gate.html             page d'entrée (code d'accès), à nos couleurs
   cg.html               conditions générales du porteur, données personnelles
   demo-carte.html       page carte de démonstration (mode simulation uniquement)
-  audience.html         tableau de bord d'audience (derrière la porte d'entrée) : /audience.html
+  audience.html         back-office (code admin) : /audience — chiffres du jour, à traiter, une ligne par visiteur
 netlify/functions/
   issue-card.mjs              POST /api/issue-card : commande avec paiement simulé (démonstration, tests)
   payment-session.mjs         POST /api/payment-session : enregistre la commande, ouvre Stripe Checkout
@@ -23,8 +23,8 @@ netlify/functions/
   issue-worker-background.mjs POST /api/issue-worker : émission en arrière-plan, puis capture ou annulation du paiement
   order-status.mjs            GET  /api/order-status : avancement d'une commande (suivi par la boutique)
   email-code.mjs              POST /api/email-code/send, /verify : vérification de l'adresse e-mail par code avant paiement
-  trace.mjs                   POST /api/trace : trace d'étape du parcours (audience, sans cookie ni IP)
-  audience.mjs                GET  /api/audience?from&to : audience agrégée (sessions, entonnoir, appareils, lieux, commandes)
+  trace.mjs                   POST /api/trace : trace d'étape du parcours (sans cookie ni IP) ; pose act:REF quand le lien d'activation est touché
+  audience.mjs                GET  /api/audience?from&to : chiffres (jour / depuis le début), à traiter, une ligne par visiteur, agrégats
   health.mjs                  GET  /api/health : état de la configuration (sans secret)
   lib/middleware.mjs          client du middleware (création client + carte, chargement)
   lib/issue.mjs               émission (simulation ou réel), catalogue serveur, validation
@@ -122,8 +122,17 @@ Dès que l'envoi d'e-mail est configuré, la boutique envoie un code à 6 chiffr
 
 Le lien d'activation ne s'ouvre qu'une fois : la page « carte prête » demande d'abord de préparer Google Wallet (bouton « intent » Android : ouvre Wallet s'il est installé, sinon sa fiche Play Store), puis seulement déverrouille « Ajouter ma carte à Google Wallet », qui ouvre le lien dans Chrome où se trouve le bouton de la plateforme. L'état « Wallet prêt » est mémorisé sur l'appareil (session).
 
-## Audience (qui vient, jusqu'où, et où ça décroche)
+## Back-office `/audience` (qui vient, ce qui se vend, ce qui attend un geste)
 
-À chaque écran du parcours, la boutique envoie une trace à `POST /api/trace` : identifiant de session volatil (sessionStorage, jamais de cookie), écran atteint, type d'appareil, pays et ville fournis par Netlify, langue, provenance, identifiant de commande une fois connu. Aucune adresse IP ni donnée personnelle n'est conservée. Les traces sont dans le magasin `orders` (clés `trace:AAAA-MM-JJ:…`).
+La page `/audience` (code admin `ADMIN_CODE`, demandé par la page d'entrée, cookie 12 h) se lit sur un téléphone en une seconde :
 
-`GET /api/audience?from=AAAA-MM-JJ&to=AAAA-MM-JJ` (porte d'entrée) agrège la période : sessions, entonnoir étape par étape avec taux de passage, dernière étape vue avant abandon, appareils, villes, pays, heures d'arrivée, jours, provenance, erreurs affichées, commandes (statut, produit, e-mail masqué, e-mail envoyé) et dernières sessions. La page `/audience` l'affiche (7 derniers jours par défaut) ; l'un et l'autre exigent le code admin (`ADMIN_CODE`), demandé par la même page d'entrée, cookie valable 12 h.
+1. **Trois chiffres**, aujourd'hui (heure de Paris) et depuis le début : visites, cartes vendues, euros encaissés. Une carte est « vendue » quand elle est émise **et** encaissée (paiement Stripe capturé) ; les démonstrations, les cartes de test et les émissions sans paiement n'y comptent pas.
+2. **À traiter** : cartes payées dont le lien n'a pas été ouvert (après 15 min de grâce), paiements à capturer ou à trancher dans Stripe (capture en erreur, chargement non confirmé, montant différent, commande bloquée en création), signaux d'échec Google Wallet (Chrome en mode « Version ordinateur », lien ouvert deux fois, lien ouvert sur un ordinateur ou hors Wallet sur Android, e-mail redemandé). Chaque ligne dit quoi faire et ouvre le paiement dans Stripe.
+3. **Une ligne par visiteur** (aujourd'hui, 7 ou 30 jours) : heure, appareil, e-mail masqué, dernière étape, et pourquoi ça s'est arrêté (« coordonnées non terminées », « parti à la caisse Stripe, n'a pas payé », « refusée · déjà une carte ce mois-ci »…). Un appui déplie le parcours, la commande et le lien Stripe.
+4. **Détail replié** : entonnoir, où ça décroche, appareils, villes, pays, heures, jours, provenance, erreurs, commandes et sessions de la période, avec dates libres (92 jours max).
+
+Ce qui alimente la page :
+
+- À chaque écran, la boutique envoie une trace à `POST /api/trace` : identifiant de session volatil (sessionStorage, jamais de cookie), écran, type d'appareil, pays et ville fournis par Netlify, langue, provenance, e-mail **masqué** (`j***n@…`, jamais en clair — une adresse en clair est refusée) et référence de commande une fois connue. Aucune adresse IP. Clés `trace:AAAA-MM-JJ:horodatage:session` dans le magasin `orders` ; les visites se comptent sur ces clés sans lire les contenus.
+- Les gestes sur le lien d'activation (Wallet préparé, lien ouvert vers Wallet, lien ouvert sur iPhone/ordinateur, Chrome en mode ordinateur) sont reportés sur un enregistrement `act:REF` par commande. Le lien e-mail `/c/REF` porte la référence (`#/carte?u=…&o=REF`), donc une carte ouverte plus tard depuis l'e-mail, sur un autre appareil, est quand même reconnue. L'émetteur n'expose aucun état de carte : « ouverte » veut dire que le lien à usage unique a été ouvert, pas que l'ajout au portefeuille a réussi.
+- `GET /api/audience?from=AAAA-MM-JJ&to=AAAA-MM-JJ` renvoie le tout (`totals`, `todo`, `people`, puis les agrégats). Au-delà de quelques dizaines de milliers de traces, prévoir des agrégats journaliers.
