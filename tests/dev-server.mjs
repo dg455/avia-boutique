@@ -16,7 +16,9 @@ const fns = {
   "/api/order-status": () => import("../netlify/functions/order-status.mjs"),
   "/api/resend-link": () => import("../netlify/functions/resend-link.mjs"),
   "/api/email-code/send": () => import("../netlify/functions/email-code.mjs"),
-  "/api/email-code/verify": () => import("../netlify/functions/email-code.mjs")
+  "/api/email-code/verify": () => import("../netlify/functions/email-code.mjs"),
+  "/api/trace": () => import("../netlify/functions/trace.mjs"),
+  "/api/audience": () => import("../netlify/functions/audience.mjs")
 };
 
 export function start(port = 8788) {

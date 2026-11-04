@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Audience de la boutique</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <style>
+    :root { --ink: #141B2D; --muted: #5a6478; --line: #d9deea; --accent: #ED1C24; --bg: #f6f8fc; }
+    body { margin: 0; font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: var(--ink); background: #fff; }
+    main { max-width: 980px; margin: 0 auto; padding: 24px 16px 60px; }
+    h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 26px 0 8px; color: #0B2A7A; }
+    .muted { color: var(--muted); } .small { font-size: 13px; }
+    form { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; margin: 14px 0 6px; }
+    label { font-size: 12px; color: var(--muted); display: block; }
+    input, button { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; }
+    button { background: var(--ink); color: #fff; border-color: var(--ink); cursor: pointer; }
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 12px 0; }
+    .kpi { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+    .kpi b { display: block; font-size: 26px; } .kpi span { font-size: 12px; color: var(--muted); }
+    table { border-collapse: collapse; width: 100%; font-size: 13px; }
+    th, td { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+    th { background: var(--bg); color: #0B2A7A; font-weight: 600; }
+    .bar { height: 8px; background: #eef2fa; border-radius: 4px; overflow: hidden; } .bar i { display: block; height: 100%; background: var(--accent); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+    .status-issued { color: #1f6b3a; font-weight: 600; } .status-failed { color: #a11818; font-weight: 600; } .status-pending { color: var(--muted); }
+    @media (max-width: 600px) { .hide-sm { display: none; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Audience de la boutique</h1>
+  <p class="muted small">Sessions = visites (un onglet, une session). Aucune adresse IP conservée ; pays et ville fournis par l'hébergeur ; e-mails masqués. Heure de Paris.</p>
+  <form id="f">
+    <div><label for="from">Du</label><input type="date" id="from"></div>
+    <div><label for="to">Au</label><input type="date" id="to"></div>
+    <button type="submit">Afficher</button>
+    <span class="muted small" id="status"></span>
+  </form>
+  <div id="out" hidden>
+    <div class="kpis">
+      <div class="kpi"><b id="k-sessions">–</b><span>sessions</span></div>
+      <div class="kpi"><b id="k-email">–</b><span>ont saisi un e-mail</span></div>
+      <div class="kpi"><b id="k-orders">–</b><span>commandes</span></div>
+      <div class="kpi"><b id="k-issued">–</b><span>cartes émises</span></div>
+    </div>
+    <h2>Entonnoir</h2>
+    <table id="funnel"><thead><tr><th>Étape</th><th>Sessions</th><th class="hide-sm">% de l'étape précédente</th><th>% des visites</th><th style="width:30%"></th></tr></thead><tbody></tbody></table>
+    <div class="grid">
+      <div><h2>Où ça décroche (dernière étape vue)</h2><table id="drop"><tbody></tbody></table></div>
+      <div><h2>Appareils</h2><table id="devices"><tbody></tbody></table></div>
+      <div><h2>Villes</h2><table id="cities"><tbody></tbody></table></div>
+      <div><h2>Pays</h2><table id="countries"><tbody></tbody></table></div>
+      <div><h2>Heures d'arrivée</h2><table id="hours"><tbody></tbody></table></div>
+      <div><h2>Jours</h2><table id="days"><tbody></tbody></table></div>
+      <div><h2>Provenance (referrer)</h2><table id="referrers"><tbody></tbody></table></div>
+      <div><h2>Erreurs affichées</h2><table id="errors"><tbody></tbody></table></div>
+    </div>
+    <h2>Commandes</h2>
+    <table id="orders"><thead><tr><th>Quand</th><th>Statut</th><th>Produit</th><th>E-mail</th><th class="hide-sm">Mode</th><th class="hide-sm">E-mail envoyé</th></tr></thead><tbody></tbody></table>
+    <h2>Dernières sessions</h2>
+    <table id="sessions"><thead><tr><th>Début</th><th>Appareil</th><th>Lieu</th><th>Dernière étape</th><th class="hide-sm">Écrans vus</th></tr></thead><tbody></tbody></table>
+  </div>
+</main>
+<script>
+(function () {
+  const $ = (s) => document.querySelector(s);
+  const fr = (iso) => new Date(iso).toLocaleString("fr-FR", { timeZone: "Europe/Paris", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const today = new Date(); const d7 = new Date(Date.now() - 6 * 86400000);
+  $("#to").value = today.toISOString().slice(0, 10); $("#from").value = d7.toISOString().slice(0, 10);
+  function fillCount(id, rows, total) {
+    $(id + " tbody").innerHTML = rows.length ? rows.slice(0, 12).map((r) => `<tr><td>${esc(r.k)}</td><td style="width:60px">${r.n}</td><td style="width:40%"><div class="bar"><i style="width:${total ? Math.round(100 * r.n / total) : 0}%"></i></div></td></tr>`).join("") : '<tr><td class="muted">—</td></tr>';
+  }
+  async function load() {
+    $("#status").textContent = "chargement…";
+    const r = await fetch(`/api/audience?from=${$("#from").value}&to=${$("#to").value}`, { cache: "no-store" });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.ok) { $("#status").textContent = j.error || ("erreur " + r.status); return; }
+    $("#status").textContent = `${j.from} → ${j.to}`; $("#out").hidden = false;
+    $("#k-sessions").textContent = j.sessions; $("#k-email").textContent = j.visitorsWithEmail;
+    $("#k-orders").textContent = j.orders.total; $("#k-issued").textContent = (j.orders.byStatus.find((s) => s.k === "issued") || { n: 0 }).n;
+    $("#funnel tbody").innerHTML = j.funnel.map((f) => `<tr><td>${esc(f.label)}</td><td>${f.sessions}</td><td class="hide-sm">${f.pctOfPrevious == null ? "–" : f.pctOfPrevious + " %"}</td><td>${f.pctOfAll == null ? "–" : f.pctOfAll + " %"}</td><td><div class="bar"><i style="width:${f.pctOfAll || 0}%"></i></div></td></tr>`).join("");
+    fillCount("#drop", j.dropOff, j.sessions); fillCount("#devices", j.devices, j.sessions); fillCount("#cities", j.cities, j.sessions);
+    fillCount("#countries", j.countries, j.sessions); fillCount("#hours", j.hours, j.sessions); fillCount("#days", j.days, j.sessions);
+    fillCount("#referrers", j.referrers, j.sessions); fillCount("#errors", j.errors, j.sessions);
+    $("#orders tbody").innerHTML = j.orders.list.length ? j.orders.list.map((o) => `<tr><td>${fr(o.at)}</td><td class="status-${esc(o.status)}">${esc(o.status)}${o.code ? " · " + esc(o.code) : ""}</td><td>${esc(o.product)}</td><td>${esc(o.email)}</td><td class="hide-sm">${esc(o.mode || "")}${o.payment ? " · " + esc(o.payment) : ""}</td><td class="hide-sm">${o.delivered == null ? "–" : o.delivered ? "oui" : "non"}</td></tr>`).join("") : '<tr><td class="muted" colspan="6">Aucune commande sur la période.</td></tr>';
+    $("#sessions tbody").innerHTML = j.sessionsList.length ? j.sessionsList.map((s) => `<tr><td>${fr(s.first)}</td><td>${esc(s.device)}</td><td>${esc(s.city ? s.city + " (" + s.country + ")" : s.country || "")}</td><td>${esc(s.lastScreen)}${s.orderId ? " · commande" : ""}</td><td class="hide-sm muted">${esc(s.screens.join(" → "))}</td></tr>`).join("") : '<tr><td class="muted" colspan="5">Aucune session tracée sur la période.</td></tr>';
+  }
+  $("#f").addEventListener("submit", (e) => { e.preventDefault(); load(); });
+  load();
+})();
+</script>
+</body>
+</html>

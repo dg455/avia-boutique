@@ -136,7 +136,22 @@
 
   // ----- Écrans -----
   const screens = $$(".screen");
+  // Trace d'étape (audience) : sans cookie ni donnée personnelle, identifiant de session volatil, jamais bloquant.
+  const sid = (() => { try { let v = sessionStorage.getItem("shop_sid"); if (!v) { v = Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, "0")).join(""); sessionStorage.setItem("shop_sid", v); } return v; } catch (e) { return "s" + Math.random().toString(16).slice(2, 18); } })();
+  let refSent = false;
+  function trace(screen, extra) {
+    try {
+      const payload = { sid, screen, orderId: state.orderId || undefined, ...(extra || {}) };
+      if (!refSent && document.referrer) { payload.ref = document.referrer.slice(0, 120); refSent = true; }
+      const body = JSON.stringify(payload);
+      if (navigator.sendBeacon && navigator.sendBeacon("/api/trace", new Blob([body], { type: "application/json" }))) return;
+      fetch("/api/trace", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+    } catch (e) { /* jamais bloquant */ }
+  }
+  const SCREEN_NAMES = { "screen-home": "home", "screen-email": "email", "screen-code": "code", "screen-known": "known", "screen-details": "details", "screen-review": "review", "screen-pay": "pay", "screen-creating": "creating", "screen-ready": "ready", "screen-error": "error", "screen-business": "business", "screen-business-done": "business-done" };
   function show(id) {
+    const name = SCREEN_NAMES[id];
+    if (name) trace(name === "ready" && state.result && state.result.fromQr ? "carte" : name, name === "error" ? { code: $("#error-text").textContent.slice(0, 32) } : undefined);
     screens.forEach((s) => s.classList.toggle("is-active", s.id === id));
     const sc = $("#" + id);
     const step = Number(sc.dataset.step || 0);
@@ -309,7 +324,7 @@
       const body = { orderId: state.orderId, product: product(), email: state.email, person: state.person, emailToken: state.emailToken || undefined };
       const r = await fetch("/api/payment-session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const j = await r.json().catch(() => ({}));
-      if (r.ok && j.redirectUrl) { remember(state.email, state.person); location.href = j.redirectUrl; return; }
+      if (r.ok && j.redirectUrl) { remember(state.email, state.person); trace("stripe"); location.href = j.redirectUrl; return; }
       btn.disabled = false;
       if (r.status === 403 && j.code === "EMAIL_UNVERIFIED") { state.verifyReturn = "#/review"; save(); requestCode(state.email, true); return; }
       showError(j.error || "Le paiement n'est pas disponible pour le moment.", "Rien n'a été débité. Réessayez dans quelques minutes.");
@@ -458,9 +473,9 @@
     } else { a.href = WALLET_STORE; a.target = "_blank"; }
   }
   function setWalletReady() { try { sessionStorage.setItem("wallet_ready", "1"); } catch (e) {} paintWalletSteps(); }
-  $("#btn-wallet-android").addEventListener("click", () => { setTimeout(setWalletReady, 800); }); // après le départ vers Wallet / le Play Store
+  $("#btn-wallet-android").addEventListener("click", () => { trace("wallet-step1"); setTimeout(setWalletReady, 800); }); // après le départ vers Wallet / le Play Store
   $("#btn-wallet-ready").addEventListener("click", setWalletReady);
-  $("#btn-android-open").addEventListener("click", (e) => { if (!walletReady()) { e.preventDefault(); $("#btn-wallet-android").focus(); } });
+  $("#btn-android-open").addEventListener("click", (e) => { if (!walletReady()) { e.preventDefault(); $("#btn-wallet-android").focus(); return; } trace("wallet-open"); });
   $("#btn-copy-link").addEventListener("click", async () => {
     const url = $("#link-text").textContent, btn = $("#btn-copy-link");
     try { await navigator.clipboard.writeText(url); btn.textContent = "Lien copié"; }

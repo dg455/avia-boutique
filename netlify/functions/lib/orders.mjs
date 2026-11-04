@@ -4,7 +4,7 @@
 // Une commande passe par : pending (session de paiement créée) → issuing (paiement autorisé, émission en cours)
 // → issued (carte créée et chargée, paiement capturé) ou failed (rien débité).
 
-import { readFile, writeFile, mkdir, rm } from "node:fs/promises";
+import { readFile, writeFile, mkdir, rm, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -71,6 +71,28 @@ export async function deleteRecord(key) {
   const store = await blobStore();
   if (store) { try { await store.delete(key); } catch { /* déjà absent */ } return; }
   try { await rm(recordFile(key), { force: true }); } catch { /* déjà absent */ }
+}
+
+// Liste les enregistrements dont la clé commence par prefix ("" = tout). Volume modeste : la boutique n'a pas vocation à des millions de lignes.
+export async function listRecords(prefix = "") {
+  const store = await blobStore();
+  if (store) {
+    const out = []; let cursor;
+    do {
+      const page = await store.list({ prefix, cursor, paginate: true });
+      for (const b of page.blobs || []) { const v = await store.get(b.key, { type: "json" }); if (v) out.push({ key: b.key, value: v }); }
+      cursor = page.cursor;
+    } while (cursor);
+    return out;
+  }
+  let names = []; try { names = await readdir(LOCAL_DIR); } catch { return []; }
+  const out = [];
+  for (const n of names) {
+    const key = n.replace(/\.json$/, "");
+    if (!key.startsWith(prefix.replace(/[^A-Za-z0-9._-]/g, "_"))) continue;
+    try { out.push({ key, value: JSON.parse(await readFile(join(LOCAL_DIR, n), "utf8")) }); } catch { /* ignoré */ }
+  }
+  return out;
 }
 
 // Ce que la boutique peut afficher au client (jamais les données complètes).

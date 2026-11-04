@@ -254,5 +254,24 @@ assert.equal(res.status, 404);
 delete process.env.SMTP_HOST; delete process.env.SMTP_USER; delete process.env.MAIL_FROM; delete process.env.ALLOW_SIMULATED_PAYMENT;
 console.log("remise du lien : e-mail + lien court ok");
 
+// Audience : traces d'étape (sans IP) puis agrégation par période
+const tr = (sid, screen, extra = {}) => fetch(`${base}/api/trace`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sid, screen, ...extra }) });
+res = await tr("abcdef1234", "home", { ref: "https://avia.example/promo" }); assert.equal(res.status, 202);
+await tr("abcdef1234", "email"); await tr("abcdef1234", "details"); await tr("abcdef1234", "review"); await tr("abcdef1234", "stripe"); await tr("abcdef1234", "creating"); await tr("abcdef1234", "ready", { orderId: id5 });
+await tr("zzzz987654", "home"); await tr("zzzz987654", "email"); await tr("zzzz987654", "error", { code: "DUPLICATE" });
+res = await tr("short", "home"); assert.equal(res.status, 400, "session invalide refusée");
+res = await tr("abcdef1234", "nimporte"); assert.equal(res.status, 400, "écran inconnu refusé");
+const today = new Date().toISOString().slice(0, 10);
+res = await fetch(`${base}/api/audience?from=${today}&to=${today}`);
+const au = await res.json();
+assert.equal(res.status, 200); assert.equal(au.sessions, 2); assert.equal(au.visitorsWithEmail, 2); assert.equal(au.visitorsWithOrder, 1);
+assert.equal(au.funnel[0].sessions, 2); assert.equal(au.funnel[au.funnel.length - 1].sessions, 1, "une session arrive à « carte prête »");
+assert.equal(au.dropOff[0].k, "E-mail saisi", "l'autre décroche après l'e-mail");
+assert.equal(au.errors[0].k, "DUPLICATE");
+assert.ok(au.orders.total >= 1 && au.orders.list.every((o) => !o.email || o.email.includes("***")), "e-mails masqués");
+assert.ok(JSON.stringify([au.sessionsList, au.orders]).indexOf("127.0.0.1") === -1 && !("ip" in (au.sessionsList[0] || {})), "aucune IP dans l'audience");
+assert.equal(au.referrers[0].k, "https://avia.example/promo");
+console.log("audience : traces + agrégation ok");
+
 mw.close(); stripeMock.close(); app.close();
 console.log("TOUT OK");
