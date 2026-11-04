@@ -273,38 +273,5 @@ assert.ok(JSON.stringify([au.sessionsList, au.orders]).indexOf("127.0.0.1") === 
 assert.equal(au.referrers[0].k, "https://avia.example/promo");
 console.log("audience : traces + agrégation ok");
 
-// Back-office : chiffres du jour / depuis le début, une ligne par personne, activation et « à traiter »
-assert.equal(au.totals.allTime.sold, 2, "deux cartes émises ET encaissées (22222222, 44444444)"); assert.equal(au.totals.allTime.euros, 192);
-assert.equal(au.totals.today.sold, 2); assert.equal(au.totals.today.visits, 2); assert.equal(au.totals.allTime.visits, 2);
-assert.equal(au.todoCount, 0, "vendues à l'instant : rien à traiter avant 15 min");
-const pTest = au.people.find((p) => p.ref === "88888888");
-assert.ok(pTest && pTest.email === "j***t@example.com" && pTest.flag === "test" && pTest.step === "Carte prête", "session reliée à sa commande (e-mail masqué, carte de démonstration)");
-const pDrop = au.people.find((p) => p.step === "Erreur" && !p.order);
-assert.ok(pDrop && pDrop.flag === "warn" && /déjà une carte/.test(pDrop.why), "pourquoi ça s'est arrêté : erreur traduite");
-assert.ok(au.people.every((p) => !p.order || !("email" in p.order)), "e-mail de la commande seulement masqué, en tête de ligne");
-// E-mail masqué dans la trace : accepté masqué, refusé en clair
-await tr("zzzz987654", "details", { em: "zz@example.com" }); await tr("zzzz987654", "details", { em: "z***z@example.com" });
-// Activation : lien ouvert vers Wallet (même REF que la commande), deux fois = ajout probablement raté ; lien ouvert sur iPhone
-await tr("wwww111111", "carte", { orderId: "22222222" }); await tr("wwww111111", "wallet-open", { orderId: "22222222" });
-await tr("vvvv111111", "link-open", { orderId: "44444444-2222-3333-4444-555555555555" });
-let au2 = await (await fetch(`${base}/api/audience?from=${today}&to=${today}`)).json();
-assert.ok(!JSON.stringify(au2).includes("zz@example.com") && au2.people.some((p) => p.email === "z***z@example.com"), "e-mail en clair jamais conservé, masqué oui");
-let p22 = au2.people.find((p) => p.ref === "22222222");
-assert.ok(p22 && p22.flag === "sold" && /Google Wallet/.test(p22.why) && p22.act.opens === 1, "vendue, lien ouvert vers Wallet");
-assert.equal(p22.order.stripeUrl, "https://dashboard.stripe.com/test/payments/pi_1", "lien direct vers le paiement Stripe (mode test)");
-const p44 = au2.people.find((p) => p.ref === "44444444");
-assert.ok(p44 && p44.flag === "sold" && /lien ouvert/.test(p44.why), "vendue, lien ouvert (iPhone)");
-assert.equal(au2.todoCount, 0);
-await tr("wwww111111", "wallet-open", { orderId: "22222222" });
-au2 = await (await fetch(`${base}/api/audience?from=${today}&to=${today}`)).json();
-p22 = au2.people.find((p) => p.ref === "22222222");
-assert.ok(p22.flag === "todo" && p22.act.opens === 2, "lien ouvert deux fois → à traiter");
-assert.equal(au2.todoCount, 1); assert.equal(au2.todo.wallet[0].ref, "22222222"); assert.ok(au2.todo.wallet[0].action && au2.todo.wallet[0].email === "j***t@example.com");
-const { getRecord: readRecord } = await import("../netlify/functions/lib/orders.mjs");
-const act22 = await readRecord("act:22222222");
-assert.ok(act22 && act22.wallet && act22.opens === 2 && !act22.link, "enregistrement d'activation act:REF");
-assert.ok(au2.totals.allTime.visits === 4 && au2.visitorsWithOrder === 3, "visites comptées sur les clés, sessions reliées par REF");
-console.log("back-office : chiffres, activation, à traiter ok");
-
 mw.close(); stripeMock.close(); app.close();
 console.log("TOUT OK");

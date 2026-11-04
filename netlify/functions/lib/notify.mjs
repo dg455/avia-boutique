@@ -97,9 +97,7 @@ export function shortCode(orderId) { return String(orderId).replace(/[^A-Za-z0-9
 export function shortLink(origin, orderId) { return `${origin}/c/${shortCode(orderId)}`; }
 
 // Page de guidage sur le téléphone (onglets Android / iPhone), qui porte le lien d'activation.
-// « o » = référence courte de la commande : la page la joint à ses traces, ce qui permet au back-office de savoir
-// qu'une carte a été ouverte même depuis l'e-mail, sur un autre appareil que celui de l'achat.
-export function guidedLink(origin, redeemUrl, orderId) { return `${origin}/#/carte?u=${encodeURIComponent(redeemUrl)}${orderId ? "&o=" + shortCode(orderId) : ""}`; }
+export function guidedLink(origin, redeemUrl) { return `${origin}/#/carte?u=${encodeURIComponent(redeemUrl)}`; }
 
 function validity(expiresIn) {
   if (!expiresIn) return null;

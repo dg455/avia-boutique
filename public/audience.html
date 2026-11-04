@@ -2,232 +2,93 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
-  <meta name="theme-color" content="#0B2A7A">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Boutique AVIA">
-  <title>Boutique AVIA — tableau de bord</title>
+  <title>Audience de la boutique</title>
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <style>
-    :root {
-      --ink: #141B2D; --navy: #0B2A7A; --muted: #5F6676; --line: #E3E6EC; --mist: #F3F4F7; --paper: #fff; --card: #fff;
-      --sold: #1B7F4F; --sold-soft: #E6F4EC; --todo: #C8211A; --todo-soft: #FDECEA; --warn: #9A5B00; --warn-soft: #FFF4DB;
-      --live: #1D5FD1; --live-soft: #E8F0FD; --drop: #8A90A0; --test: #6B7280; --biz: #6D3FC8;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root { --ink: #EEF1F7; --navy: #9FB4F2; --muted: #9AA3B5; --line: #2A3040; --mist: #1A1F2B; --paper: #0F1218; --card: #161B25;
-        --sold-soft: #10291C; --todo-soft: #3A1512; --warn-soft: #332607; --live-soft: #12213F; --sold: #4CC38A; --todo: #FF6B61; --warn: #E0A83A; --live: #7FA6F5; }
-    }
-    * { box-sizing: border-box; }
-    html { -webkit-text-size-adjust: 100%; }
-    body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
-    main { max-width: 640px; margin: 0 auto; padding: 10px 14px calc(40px + env(safe-area-inset-bottom)); }
-    h1 { font-size: 17px; margin: 0; letter-spacing: -.01em; }
-    h2 { font-size: 13px; margin: 24px 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-    .top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 6px 0 10px; }
-    .when { font-size: 13px; color: var(--muted); white-space: nowrap; }
-    .when button { font: inherit; color: var(--navy); background: none; border: 0; padding: 0; margin-left: 6px; cursor: pointer; }
+    :root { --ink: #141B2D; --muted: #5a6478; --line: #d9deea; --accent: #ED1C24; --bg: #f6f8fc; }
+    body { margin: 0; font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: var(--ink); background: #fff; }
+    main { max-width: 980px; margin: 0 auto; padding: 24px 16px 60px; }
+    h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 26px 0 8px; color: #0B2A7A; }
     .muted { color: var(--muted); } .small { font-size: 13px; }
-    .nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .num { background: var(--mist); border-radius: 14px; padding: 12px 10px 10px; min-width: 0; }
-    .num b { display: block; font-size: 30px; line-height: 1.05; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .num span { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; }
-    .num small { display: block; font-size: 12px; color: var(--ink); margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .nums-cap { font-size: 12px; color: var(--muted); margin: 6px 2px 0; }
-    .badge { display: inline-block; min-width: 22px; padding: 1px 7px; border-radius: 999px; font-size: 12px; text-align: center; color: #fff; background: var(--drop); letter-spacing: 0; }
-    .badge.is-hot { background: var(--todo); }
-    .calm { background: var(--sold-soft); color: var(--sold); border-radius: 12px; padding: 12px 14px; font-weight: 600; }
-    .t { border-radius: 12px; padding: 10px 12px 10px 14px; margin-bottom: 8px; background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--todo); }
-    .t.kind-activation { border-left-color: var(--warn); } .t.kind-wallet { border-left-color: var(--live); }
-    .t-tag { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--todo); }
-    .t.kind-activation .t-tag { color: var(--warn); } .t.kind-wallet .t-tag { color: var(--live); }
-    .t-head { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; margin-top: 2px; }
-    .t-head b { font-weight: 600; } .t-why { margin-top: 3px; } .t-act { margin-top: 5px; font-size: 14px; color: var(--muted); }
-    .t-act a, .p-more a { color: var(--navy); font-weight: 600; text-decoration: none; }
-    .seg { display: flex; gap: 6px; margin: 0 0 10px; }
-    .seg button { flex: 1; font: inherit; font-size: 14px; padding: 7px 4px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; }
-    .seg button.is-on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-    .p { border-top: 1px solid var(--line); padding: 9px 0 9px 12px; position: relative; cursor: pointer; }
-    .p::before { content: ""; position: absolute; left: 0; top: 13px; width: 7px; height: 7px; border-radius: 50%; background: var(--drop); }
-    .p.flag-sold::before { background: var(--sold); } .p.flag-todo::before { background: var(--todo); box-shadow: 0 0 0 3px var(--todo-soft); }
-    .p.flag-warn::before { background: var(--warn); } .p.flag-live::before { background: var(--live); box-shadow: 0 0 0 3px var(--live-soft); }
-    .p.flag-test::before { background: transparent; border: 1.5px dashed var(--test); width: 5px; height: 5px; } .p.flag-biz::before { background: var(--biz); } .p.flag-info::before { background: var(--navy); }
-    .p-head { display: flex; gap: 8px; align-items: baseline; font-size: 15px; min-width: 0; }
-    .p-time { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
-    .p-dev { color: var(--muted); white-space: nowrap; }
-    .p-mail { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-    .p-why { font-size: 14px; margin-top: 2px; color: var(--ink); }
-    .p-step { color: var(--muted); }
-    .p.flag-todo .p-why { color: var(--todo); font-weight: 600; } .p.flag-sold .p-why b { color: var(--sold); }
-    .p-more { margin-top: 8px; font-size: 13px; color: var(--muted); background: var(--mist); border-radius: 10px; padding: 8px 10px; }
-    .p-more div { margin: 2px 0; } .p-more .k { color: var(--ink); font-weight: 600; }
-    .empty { color: var(--muted); padding: 10px 0; }
-    details.detail { margin-top: 26px; border-top: 1px solid var(--line); padding-top: 6px; }
-    details.detail > summary { cursor: pointer; font-size: 14px; color: var(--muted); padding: 8px 0; list-style: none; }
-    details.detail > summary::-webkit-details-marker { display: none; }
-    details.detail > summary::before { content: "▸ "; } details.detail[open] > summary::before { content: "▾ "; }
-    form.dates { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; margin: 10px 0 6px; }
+    form { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; margin: 14px 0 6px; }
     label { font-size: 12px; color: var(--muted); display: block; }
-    input, form.dates button { font: inherit; font-size: 15px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 9px; background: var(--card); color: var(--ink); }
-    form.dates button { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-    h3 { font-size: 14px; margin: 18px 0 6px; color: var(--navy); }
+    input, button { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; }
+    button { background: var(--ink); color: #fff; border-color: var(--ink); cursor: pointer; }
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 12px 0; }
+    .kpi { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+    .kpi b { display: block; font-size: 26px; } .kpi span { font-size: 12px; color: var(--muted); }
     table { border-collapse: collapse; width: 100%; font-size: 13px; }
-    th, td { border-bottom: 1px solid var(--line); padding: 5px 6px; text-align: left; vertical-align: top; }
-    th { color: var(--muted); font-weight: 600; }
-    .bar { height: 7px; background: var(--mist); border-radius: 4px; overflow: hidden; } .bar i { display: block; height: 100%; background: var(--navy); }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0 18px; }
-    .status-issued { color: var(--sold); font-weight: 600; } .status-failed { color: var(--todo); font-weight: 600; } .status-pending, .status-issuing, .status-processing { color: var(--muted); }
+    th, td { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+    th { background: var(--bg); color: #0B2A7A; font-weight: 600; }
+    .bar { height: 8px; background: #eef2fa; border-radius: 4px; overflow: hidden; } .bar i { display: block; height: 100%; background: var(--accent); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+    .status-issued { color: #1f6b3a; font-weight: 600; } .status-failed { color: #a11818; font-weight: 600; } .status-pending { color: var(--muted); }
     @media (max-width: 600px) { .hide-sm { display: none; } }
   </style>
 </head>
 <body>
 <main>
-  <div class="top">
-    <h1>Boutique AVIA</h1>
-    <div class="when"><span id="when">chargement…</span><button type="button" id="btn-refresh" aria-label="Actualiser">⟳</button></div>
-  </div>
-
-  <div class="nums">
-    <div class="num"><b id="n-visits">–</b><span>visites</span><small id="a-visits">–</small></div>
-    <div class="num"><b id="n-sold">–</b><span>cartes vendues</span><small id="a-sold">–</small></div>
-    <div class="num"><b id="n-euros">–</b><span>encaissé</span><small id="a-euros">–</small></div>
-  </div>
-  <div class="nums-cap" id="nums-cap">Aujourd'hui, heure de Paris. En dessous : depuis le début.</div>
-
-  <h2>À traiter <span class="badge" id="todo-count">–</span></h2>
-  <div id="todo"></div>
-
-  <h2>Qui est venu</h2>
-  <div class="seg" id="seg">
-    <button type="button" data-range="today">Aujourd'hui</button>
-    <button type="button" data-range="7" class="is-on">7 jours</button>
-    <button type="button" data-range="30">30 jours</button>
-  </div>
-  <div id="people"></div>
-
-  <details class="detail" id="detail">
-    <summary>Détail de la période : entonnoir, appareils, villes, heures, commandes</summary>
-    <form class="dates" id="f">
-      <div><label for="from">Du</label><input type="date" id="from"></div>
-      <div><label for="to">Au</label><input type="date" id="to"></div>
-      <button type="submit">Afficher</button>
-      <span class="muted small" id="status"></span>
-    </form>
-    <p class="muted small">Visite = un onglet, une session. Aucune adresse IP conservée ; pays et ville fournis par l'hébergeur ; e-mails masqués. Carte vendue = émise et encaissée (les tests et démonstrations ne comptent pas).</p>
-    <div class="grid">
-      <div><h3>Entonnoir</h3><table id="funnel"><thead><tr><th>Étape</th><th>Visites</th><th class="hide-sm">% préc.</th><th>% total</th><th style="width:30%"></th></tr></thead><tbody></tbody></table></div>
-      <div><h3>Où ça décroche (dernière étape vue)</h3><table id="drop"><tbody></tbody></table></div>
-      <div><h3>Appareils</h3><table id="devices"><tbody></tbody></table></div>
-      <div><h3>Villes</h3><table id="cities"><tbody></tbody></table></div>
-      <div><h3>Pays</h3><table id="countries"><tbody></tbody></table></div>
-      <div><h3>Heures d'arrivée</h3><table id="hours"><tbody></tbody></table></div>
-      <div><h3>Jours</h3><table id="days"><tbody></tbody></table></div>
-      <div><h3>Provenance (referrer)</h3><table id="referrers"><tbody></tbody></table></div>
-      <div><h3>Erreurs affichées</h3><table id="errors"><tbody></tbody></table></div>
+  <h1>Audience de la boutique</h1>
+  <p class="muted small">Sessions = visites (un onglet, une session). Aucune adresse IP conservée ; pays et ville fournis par l'hébergeur ; e-mails masqués. Heure de Paris.</p>
+  <form id="f">
+    <div><label for="from">Du</label><input type="date" id="from"></div>
+    <div><label for="to">Au</label><input type="date" id="to"></div>
+    <button type="submit">Afficher</button>
+    <span class="muted small" id="status"></span>
+  </form>
+  <div id="out" hidden>
+    <div class="kpis">
+      <div class="kpi"><b id="k-sessions">–</b><span>sessions</span></div>
+      <div class="kpi"><b id="k-email">–</b><span>ont saisi un e-mail</span></div>
+      <div class="kpi"><b id="k-orders">–</b><span>commandes</span></div>
+      <div class="kpi"><b id="k-issued">–</b><span>cartes émises</span></div>
     </div>
-    <h3>Commandes de la période</h3>
-    <table id="orders"><thead><tr><th>Quand</th><th>Statut</th><th>Carte</th><th>E-mail</th><th class="hide-sm">Mode</th><th class="hide-sm">E-mail envoyé</th></tr></thead><tbody></tbody></table>
-    <h3>Sessions</h3>
+    <h2>Entonnoir</h2>
+    <table id="funnel"><thead><tr><th>Étape</th><th>Sessions</th><th class="hide-sm">% de l'étape précédente</th><th>% des visites</th><th style="width:30%"></th></tr></thead><tbody></tbody></table>
+    <div class="grid">
+      <div><h2>Où ça décroche (dernière étape vue)</h2><table id="drop"><tbody></tbody></table></div>
+      <div><h2>Appareils</h2><table id="devices"><tbody></tbody></table></div>
+      <div><h2>Villes</h2><table id="cities"><tbody></tbody></table></div>
+      <div><h2>Pays</h2><table id="countries"><tbody></tbody></table></div>
+      <div><h2>Heures d'arrivée</h2><table id="hours"><tbody></tbody></table></div>
+      <div><h2>Jours</h2><table id="days"><tbody></tbody></table></div>
+      <div><h2>Provenance (referrer)</h2><table id="referrers"><tbody></tbody></table></div>
+      <div><h2>Erreurs affichées</h2><table id="errors"><tbody></tbody></table></div>
+    </div>
+    <h2>Commandes</h2>
+    <table id="orders"><thead><tr><th>Quand</th><th>Statut</th><th>Produit</th><th>E-mail</th><th class="hide-sm">Mode</th><th class="hide-sm">E-mail envoyé</th></tr></thead><tbody></tbody></table>
+    <h2>Dernières sessions</h2>
     <table id="sessions"><thead><tr><th>Début</th><th>Appareil</th><th>Lieu</th><th>Dernière étape</th><th class="hide-sm">Écrans vus</th></tr></thead><tbody></tbody></table>
-  </details>
+  </div>
 </main>
 <script>
 (function () {
-  const $ = (s, r) => (r || document).querySelector(s);
-  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const TZ = "Europe/Paris";
-  const parisDay = (d) => new Date(d).toLocaleDateString("fr-CA", { timeZone: TZ });
-  const eur = (n) => new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(n || 0).replace(/ /g, " ");
-  const hm = (iso) => new Date(iso).toLocaleTimeString("fr-FR", { timeZone: TZ, hour: "2-digit", minute: "2-digit" });
-  let today = parisDay(Date.now());
-  const when = (iso) => parisDay(iso) === today ? hm(iso) : new Date(iso).toLocaleDateString("fr-FR", { timeZone: TZ, day: "numeric", month: "short" }) + " " + hm(iso);
-  const dayOffset = (d, n) => { const x = new Date(d + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
-  const frDay = (d) => new Date(d + "T12:00:00Z").toLocaleDateString("fr-FR", { timeZone: "UTC", day: "numeric", month: "short", year: parisDay(Date.now()).slice(0, 4) === d.slice(0, 4) ? undefined : "numeric" });
-  const TAG = { activation: "Non activée", capture: "À capturer", wallet: "Wallet" };
-
-  let range = "7", from = dayOffset(today, -6), to = today, busy = false, timer = null;
-  $("#from").value = from; $("#to").value = to;
-
-  function applyRange(r) {
-    range = r;
-    document.querySelectorAll("#seg button").forEach((b) => b.classList.toggle("is-on", b.dataset.range === r));
-    if (r !== "custom") { to = today; from = r === "today" ? today : dayOffset(today, -(Number(r) - 1)); $("#from").value = from; $("#to").value = to; }
-  }
-
+  const $ = (s) => document.querySelector(s);
+  const fr = (iso) => new Date(iso).toLocaleString("fr-FR", { timeZone: "Europe/Paris", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const today = new Date(); const d7 = new Date(Date.now() - 6 * 86400000);
+  $("#to").value = today.toISOString().slice(0, 10); $("#from").value = d7.toISOString().slice(0, 10);
   function fillCount(id, rows, total) {
-    $(id + " tbody").innerHTML = rows.length ? rows.slice(0, 12).map((r) => `<tr><td>${esc(/^\d{4}-\d{2}-\d{2}$/.test(r.k) ? frDay(r.k) : r.k)}</td><td style="width:56px">${r.n}</td><td style="width:40%"><div class="bar"><i style="width:${total ? Math.round(100 * r.n / total) : 0}%"></i></div></td></tr>`).join("") : '<tr><td class="muted">—</td></tr>';
+    $(id + " tbody").innerHTML = rows.length ? rows.slice(0, 12).map((r) => `<tr><td>${esc(r.k)}</td><td style="width:60px">${r.n}</td><td style="width:40%"><div class="bar"><i style="width:${total ? Math.round(100 * r.n / total) : 0}%"></i></div></td></tr>`).join("") : '<tr><td class="muted">—</td></tr>';
   }
-
-  function renderTodo(j) {
-    const items = [].concat(j.todo.capture.map((t) => ({ ...t, kind: "capture" })), j.todo.activation.map((t) => ({ ...t, kind: "activation" })), j.todo.wallet.map((t) => ({ ...t, kind: "wallet" })));
-    const badge = $("#todo-count"); badge.textContent = items.length; badge.classList.toggle("is-hot", items.length > 0);
-    if (!items.length) { $("#todo").innerHTML = '<div class="calm">Rien à traiter.</div>'; return; }
-    $("#todo").innerHTML = items.map((t) => `<div class="t kind-${esc(t.kind)}">
-      <div class="t-tag">${esc(TAG[t.kind])}</div>
-      <div class="t-head"><span class="p-time">${esc(when(t.at))}</span><b>${esc(t.email || "—")}</b><span class="muted">${esc(t.product || "")}${t.price != null ? " · payé " + esc(eur(t.price)) : ""}${t.device && t.device !== "?" ? " · " + esc(t.device) : ""}</span></div>
-      <div class="t-why">${esc(t.why)}</div>
-      <div class="t-act">→ ${esc(t.action || "")}${t.stripeUrl ? ` · <a href="${esc(t.stripeUrl)}" target="_blank" rel="noopener">Ouvrir dans Stripe ↗</a>` : ""} · réf. ${esc(t.ref)}</div>
-    </div>`).join("");
-  }
-
-  function renderPeople(j) {
-    const list = j.people;
-    if (!list.length) { $("#people").innerHTML = `<div class="empty">Personne ${range === "today" ? "aujourd'hui" : "sur la période"}.</div>`; return; }
-    $("#people").innerHTML = list.map((p, i) => {
-      const o = p.order, a = p.act;
-      const more = [
-        p.path.length ? `<div><span class="k">Parcours</span> ${esc(p.path.join(" → "))}</div>` : "",
-        p.city || p.country || p.lang ? `<div><span class="k">D'où</span> ${esc([p.city, p.country, p.lang].filter(Boolean).join(" · "))}${p.referrer ? " · venu de " + esc(p.referrer) : ""}</div>` : (p.referrer ? `<div><span class="k">Venu de</span> ${esc(p.referrer)}</div>` : ""),
-        o ? `<div><span class="k">Commande ${esc(o.ref)}</span> ${esc(o.status)}${o.code ? " · " + esc(o.code) : ""} · carte ${esc(o.product || "?")}${o.price != null ? " payée " + esc(eur(o.price)) : ""}${o.last4 ? " · •••• " + esc(o.last4) : ""} · ${esc(o.mode || "?")} / ${esc(o.payment || "?")}${o.captured === true ? " · encaissé" : o.captured === false ? " · non encaissé" : ""}${o.delivered == null ? "" : o.delivered ? " · e-mail envoyé" : " · e-mail NON envoyé"}${o.resend ? " · renvoyé ×" + o.resend : ""}</div>` : "",
-        a ? `<div><span class="k">Lien</span> ${[a.prep ? "Wallet préparé " + hm(a.prep) : "", a.wallet ? "ouvert vers Wallet " + hm(a.wallet) : "", a.link ? "ouvert " + hm(a.link) : "", a.desktop ? "Chrome mode ordinateur " + hm(a.desktop) : "", a.opens > 1 ? a.opens + " ouvertures" : "", a.device && a.device !== "?" ? "sur " + a.device : ""].filter(Boolean).join(" · ")}</div>` : "",
-        o && o.action ? `<div><span class="k">À faire</span> ${esc(o.action)}${o.stripeUrl ? ` · <a href="${esc(o.stripeUrl)}" target="_blank" rel="noopener">Ouvrir dans Stripe ↗</a>` : ""}</div>` : (o && o.stripeUrl ? `<div><a href="${esc(o.stripeUrl)}" target="_blank" rel="noopener">Paiement dans Stripe ↗</a></div>` : ""),
-        `<div><span class="k">Vu</span> de ${esc(when(p.at))} à ${esc(hm(p.last))}</div>`
-      ].filter(Boolean).join("");
-      return `<div class="p flag-${esc(p.flag)}" data-i="${i}" role="button" tabindex="0">
-        <div class="p-head"><span class="p-time">${esc(when(p.at))}</span><span class="p-dev">${esc(p.device || "?")}</span><span class="p-mail">${esc(p.email || "—")}</span></div>
-        <div class="p-why"><span class="p-step">${esc(p.step)}</span> · ${esc(p.why)}</div>
-        <div class="p-more" hidden>${more}</div>
-      </div>`;
-    }).join("");
-  }
-
-  function renderDetail(j) {
+  async function load() {
+    $("#status").textContent = "chargement…";
+    const r = await fetch(`/api/audience?from=${$("#from").value}&to=${$("#to").value}`, { cache: "no-store" });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.ok) { $("#status").textContent = j.error || ("erreur " + r.status); return; }
+    $("#status").textContent = `${j.from} → ${j.to}`; $("#out").hidden = false;
+    $("#k-sessions").textContent = j.sessions; $("#k-email").textContent = j.visitorsWithEmail;
+    $("#k-orders").textContent = j.orders.total; $("#k-issued").textContent = (j.orders.byStatus.find((s) => s.k === "issued") || { n: 0 }).n;
     $("#funnel tbody").innerHTML = j.funnel.map((f) => `<tr><td>${esc(f.label)}</td><td>${f.sessions}</td><td class="hide-sm">${f.pctOfPrevious == null ? "–" : f.pctOfPrevious + " %"}</td><td>${f.pctOfAll == null ? "–" : f.pctOfAll + " %"}</td><td><div class="bar"><i style="width:${f.pctOfAll || 0}%"></i></div></td></tr>`).join("");
     fillCount("#drop", j.dropOff, j.sessions); fillCount("#devices", j.devices, j.sessions); fillCount("#cities", j.cities, j.sessions);
     fillCount("#countries", j.countries, j.sessions); fillCount("#hours", j.hours, j.sessions); fillCount("#days", j.days, j.sessions);
     fillCount("#referrers", j.referrers, j.sessions); fillCount("#errors", j.errors, j.sessions);
-    $("#orders tbody").innerHTML = j.orders.list.length ? j.orders.list.map((o) => `<tr><td>${esc(when(o.at))}</td><td class="status-${esc(o.status)}">${esc(o.status)}${o.code ? " · " + esc(o.code) : ""}<div class="muted" style="font-weight:400">${esc(o.why)}</div></td><td>${esc(o.product)}</td><td>${esc(o.email)}</td><td class="hide-sm">${esc(o.mode || "")}${o.payment ? " · " + esc(o.payment) : ""}</td><td class="hide-sm">${o.delivered == null ? "–" : o.delivered ? "oui" : "non"}</td></tr>`).join("") : '<tr><td class="muted" colspan="6">Aucune commande sur la période.</td></tr>';
-    $("#sessions tbody").innerHTML = j.sessionsList.length ? j.sessionsList.map((s) => `<tr><td>${esc(when(s.first))}</td><td>${esc(s.device)}</td><td>${esc(s.city ? s.city + " (" + s.country + ")" : s.country || "")}</td><td>${esc(s.lastScreen)}${s.orderId ? " · commande" : ""}</td><td class="hide-sm muted">${esc(s.screens.join(" → "))}</td></tr>`).join("") : '<tr><td class="muted" colspan="5">Aucune session tracée sur la période.</td></tr>';
-    $("#status").textContent = `${frDay(j.from)} → ${frDay(j.to)} · ${j.sessions} visite${j.sessions > 1 ? "s" : ""}, ${j.orders.total} commande${j.orders.total > 1 ? "s" : ""}${j.truncated ? " · période trop chargée : seules les traces les plus récentes sont lues" : ""}`;
+    $("#orders tbody").innerHTML = j.orders.list.length ? j.orders.list.map((o) => `<tr><td>${fr(o.at)}</td><td class="status-${esc(o.status)}">${esc(o.status)}${o.code ? " · " + esc(o.code) : ""}</td><td>${esc(o.product)}</td><td>${esc(o.email)}</td><td class="hide-sm">${esc(o.mode || "")}${o.payment ? " · " + esc(o.payment) : ""}</td><td class="hide-sm">${o.delivered == null ? "–" : o.delivered ? "oui" : "non"}</td></tr>`).join("") : '<tr><td class="muted" colspan="6">Aucune commande sur la période.</td></tr>';
+    $("#sessions tbody").innerHTML = j.sessionsList.length ? j.sessionsList.map((s) => `<tr><td>${fr(s.first)}</td><td>${esc(s.device)}</td><td>${esc(s.city ? s.city + " (" + s.country + ")" : s.country || "")}</td><td>${esc(s.lastScreen)}${s.orderId ? " · commande" : ""}</td><td class="hide-sm muted">${esc(s.screens.join(" → "))}</td></tr>`).join("") : '<tr><td class="muted" colspan="5">Aucune session tracée sur la période.</td></tr>';
   }
-
-  async function load() {
-    if (busy) return; busy = true;
-    $("#when").textContent = "actualisation…";
-    try {
-      const r = await fetch(`/api/audience?from=${from}&to=${to}`, { cache: "no-store" });
-      const j = await r.json().catch(() => ({}));
-      if (r.status === 401) { location.href = "/gate?admin=1&next=" + encodeURIComponent("/audience"); return; }
-      if (!r.ok || !j.ok) { $("#when").textContent = j.error || ("erreur " + r.status); return; }
-      today = j.today;
-      $("#n-visits").textContent = j.totals.today.visits; $("#n-sold").textContent = j.totals.today.sold; $("#n-euros").textContent = eur(j.totals.today.euros);
-      $("#a-visits").textContent = j.totals.allTime.visits + " au total"; $("#a-sold").textContent = j.totals.allTime.sold + " au total"; $("#a-euros").textContent = eur(j.totals.allTime.euros) + " au total";
-      $("#nums-cap").textContent = `Aujourd'hui, heure de Paris · en dessous : depuis le ${frDay(j.totals.allTime.since)}`;
-      renderTodo(j); renderPeople(j); renderDetail(j);
-      $("#when").textContent = "à " + hm(j.now);
-    } catch (e) { $("#when").textContent = "hors ligne"; }
-    finally { busy = false; }
-  }
-
-  document.querySelectorAll("#seg button").forEach((b) => b.addEventListener("click", () => { applyRange(b.dataset.range); load(); }));
-  $("#f").addEventListener("submit", (e) => { e.preventDefault(); from = $("#from").value; to = $("#to").value; applyRange("custom"); load(); });
-  $("#btn-refresh").addEventListener("click", load);
-  $("#people").addEventListener("click", (e) => { const p = e.target.closest(".p"); if (!p || e.target.closest("a")) return; const m = $(".p-more", p); m.hidden = !m.hidden; });
-  $("#people").addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { const p = e.target.closest(".p"); if (p) { e.preventDefault(); const m = $(".p-more", p); m.hidden = !m.hidden; } } });
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
-  timer = setInterval(() => { if (!document.hidden) load(); }, 60000);
+  $("#f").addEventListener("submit", (e) => { e.preventDefault(); load(); });
   load();
 })();
 </script>

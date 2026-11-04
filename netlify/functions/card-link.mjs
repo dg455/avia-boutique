@@ -16,7 +16,7 @@ export default async (request, context) => {
   }
   // Le porteur arrive depuis son e-mail, sans le code de la porte d'entrée : un lien de commande valide vaut
   // laissez-passer, on pose le cookie de la porte (même valeur que gate.ts) avant de l'envoyer sur la page de guidage.
-  const headers = new Headers({ location: guidedLink(origin, order.result.redeemUrl, order.orderId), "cache-control": "no-store" });
+  const headers = new Headers({ location: guidedLink(origin, order.result.redeemUrl), "cache-control": "no-store" });
   const gateCode = process.env.SHOP_ACCESS_CODE || "Avia2026";
   if (gateCode !== "open") {
     const expected = createHash("sha256").update("shop-gate|" + gateCode).digest("hex");
