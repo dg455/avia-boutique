@@ -6,7 +6,7 @@ import { setRecord } from "./lib/orders.mjs";
 
 export const config = { path: "/api/trace" };
 
-const SCREENS = new Set(["home", "email", "code", "known", "details", "review", "pay", "stripe", "creating", "ready", "carte", "error", "business", "business-done", "wallet-step1", "wallet-open"]);
+const SCREENS = new Set(["home", "email", "code", "known", "details", "review", "pay", "stripe", "creating", "ready", "carte", "error", "business", "business-done", "wallet-step1", "wallet-open", "desktop-mode"]);
 
 function deviceOf(ua) {
   if (/iphone|ipod/i.test(ua)) return "iphone";

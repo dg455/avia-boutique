@@ -431,9 +431,15 @@
     state.orderId = null; state.payment = null; save();
   }
   // Appareil du client : détecté, modifiable par les onglets.
+  // Chrome Android en mode « Version ordinateur » se présente comme un PC Linux : écran tactile + UA Linux x86_64 = Android déguisé.
+  // Dans ce mode, la page carte de la plateforme ne lance pas Google Wallet (constaté le 4 novembre 2026, confirmé par ses logs).
+  function desktopModeOnPhone() {
+    const ua = navigator.userAgent || "";
+    return /X11; Linux x86_64/.test(ua) && navigator.maxTouchPoints > 1 && Math.min(screen.width, screen.height) < 900;
+  }
   function detectDevice() {
     const ua = navigator.userAgent || "";
-    if (/android/i.test(ua)) return "android";
+    if (/android/i.test(ua) || desktopModeOnPhone()) return "android";
     if (/iphone|ipad|ipod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) return "ios";
     return "other";
   }
@@ -461,6 +467,8 @@
   const WALLET_STORE = "https://play.google.com/store/apps/details?id=" + WALLET_PKG;
   const walletReady = () => { try { return sessionStorage.getItem("wallet_ready") === "1"; } catch (e) { return false; } };
   function paintWalletSteps() {
+    const warn = $("#desktop-mode-warning");
+    if (warn) { warn.hidden = !desktopModeOnPhone(); if (!warn.hidden) trace("desktop-mode"); }
     const ready = walletReady();
     const s1 = $("#wallet-step-1"), s2 = $("#wallet-step-2"), open = $("#btn-android-open");
     s1.classList.toggle("is-done", ready); s2.classList.toggle("is-locked", !ready);

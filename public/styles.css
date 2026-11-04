@@ -269,3 +269,7 @@ textarea.input { min-height: 110px; resize: vertical; }
 .wallet-steps li.is-locked .btn { pointer-events: none; filter: grayscale(.6); }
 .wallet-steps li.is-done .n::after { content: " ✓"; font-size: 14px; }
 #btn-wallet-ready { margin-left: 6px; font-size: 14px; }
+
+/* Avertissement mode « Version ordinateur » (Chrome Android) */
+.notice { border-radius: 10px; padding: 10px 12px; font-size: 14px; line-height: 1.45; margin: 14px 0 0; }
+.notice-warn { background: #fff4e0; border: 1px solid #f0c36d; color: #5a3b00; }
