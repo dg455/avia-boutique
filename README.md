@@ -53,6 +53,7 @@ Le mode courant se lit sur `/api/health`.
 | Variable | Rôle |
 |---|---|
 | `SHOP_ACCESS_CODE` | code de la porte d'entrée (défaut `Avia2026` ; `open` = boutique ouverte au public) |
+| `ADMIN_CODE` | code de l'espace admin (`/audience`, `/api/audience`) ; à défaut, le code de la boutique tant qu'elle est fermée — boutique ouverte sans `ADMIN_CODE` = admin inaccessible |
 | `MW_BASE_URL` | URL de base du middleware (absente = simulation) |
 | `MW_BASIC_USER`, `MW_BASIC_PASS` | identifiants Basic de l'utilisateur API |
 | `MW_API_KEY`, `MW_API_KEY_HEADER` | clé API et nom de son en-tête (défaut `x-api-key`) |
@@ -125,4 +126,4 @@ Le lien d'activation ne s'ouvre qu'une fois : la page « carte prête » demande
 
 À chaque écran du parcours, la boutique envoie une trace à `POST /api/trace` : identifiant de session volatil (sessionStorage, jamais de cookie), écran atteint, type d'appareil, pays et ville fournis par Netlify, langue, provenance, identifiant de commande une fois connu. Aucune adresse IP ni donnée personnelle n'est conservée. Les traces sont dans le magasin `orders` (clés `trace:AAAA-MM-JJ:…`).
 
-`GET /api/audience?from=AAAA-MM-JJ&to=AAAA-MM-JJ` (porte d'entrée) agrège la période : sessions, entonnoir étape par étape avec taux de passage, dernière étape vue avant abandon, appareils, villes, pays, heures d'arrivée, jours, provenance, erreurs affichées, commandes (statut, produit, e-mail masqué, e-mail envoyé) et dernières sessions. La page `/audience.html` l'affiche (7 derniers jours par défaut).
+`GET /api/audience?from=AAAA-MM-JJ&to=AAAA-MM-JJ` (porte d'entrée) agrège la période : sessions, entonnoir étape par étape avec taux de passage, dernière étape vue avant abandon, appareils, villes, pays, heures d'arrivée, jours, provenance, erreurs affichées, commandes (statut, produit, e-mail masqué, e-mail envoyé) et dernières sessions. La page `/audience` l'affiche (7 derniers jours par défaut) ; l'un et l'autre exigent le code admin (`ADMIN_CODE`), demandé par la même page d'entrée, cookie valable 12 h.

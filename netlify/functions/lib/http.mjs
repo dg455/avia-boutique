@@ -15,6 +15,17 @@ export function gateOk(request, env) {
   return !!m && m[1] === expected;
 }
 
+// Espace admin (audience) : cookie shop_admin = SHA-256("shop-gate|admin|" + ADMIN_CODE). Même règle que gate.ts.
+export function adminOk(request, env) {
+  const code = env.SHOP_ACCESS_CODE || "Avia2026";
+  const adminCode = env.ADMIN_CODE || (code === "open" ? "" : code);
+  if (!adminCode) return false;
+  const expected = createHash("sha256").update("shop-gate|admin|" + adminCode).digest("hex");
+  const cookie = request.headers.get("cookie") || "";
+  const m = cookie.match(/(?:^|;\s*)shop_admin=([a-f0-9]{64})/);
+  return !!m && m[1] === expected;
+}
+
 // Marque telle que les messages au porteur la nomment (mêmes valeurs par défaut que public/config.js).
 export function brandInfo(env) {
   return {

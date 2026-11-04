@@ -1,7 +1,7 @@
 // GET /api/audience?from=AAAA-MM-JJ&to=AAAA-MM-JJ — audience de la boutique sur une période (défaut : 7 derniers jours).
 // Derrière la porte d'entrée. Agrège les traces d'étape (/api/trace) et les commandes : sessions, entonnoir, appareils,
 // pays/villes, heures, commandes (statut, produit, e-mail masqué). Aucune adresse IP n'est conservée ni renvoyée.
-import { gateOk, json } from "./lib/http.mjs";
+import { adminOk, json } from "./lib/http.mjs";
 import { listRecords } from "./lib/orders.mjs";
 
 export const config = { path: "/api/audience" };
@@ -18,7 +18,7 @@ const count = (arr, f) => { const m = new Map(); for (const x of arr) { const k 
 
 export default async (request) => {
   if (request.method !== "GET") return json(405, { ok: false });
-  if (!gateOk(request, process.env)) return json(401, { ok: false, code: "UNAUTHORIZED" });
+  if (!adminOk(request, process.env)) return json(401, { ok: false, code: "UNAUTHORIZED", error: "Code admin requis." });
   const q = new URL(request.url).searchParams;
   const to = /^\d{4}-\d{2}-\d{2}$/.test(q.get("to") || "") ? q.get("to") : day(new Date());
   const from = /^\d{4}-\d{2}-\d{2}$/.test(q.get("from") || "") ? q.get("from") : day(new Date(Date.parse(to) - 6 * 86400000));

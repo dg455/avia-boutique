@@ -24,6 +24,7 @@
         <div class="field-error" id="gate-error">Code incorrect.</div>
       </div>
       <input type="hidden" name="next" id="next" value="/">
+      <input type="hidden" name="admin" id="admin" value="">
       <div class="btn-row">
         <button class="btn btn-ink" type="submit">Entrer</button>
       </div>
@@ -42,6 +43,7 @@
       var q = new URLSearchParams(location.search);
       if (q.get("err")) { document.getElementById("code").closest(".field").classList.add("has-error"); }
       var n = q.get("next"); if (n && n.charAt(0) === "/") document.getElementById("next").value = n;
+      if (q.get("admin") === "1") { document.getElementById("admin").value = "1"; document.querySelector("h1").textContent = "Espace admin"; document.querySelector(".gate-box p").textContent = "Audience de la boutique : entrez le code admin."; document.querySelector("label[for=code]").textContent = "Code admin"; }
     })();
   </script>
 </body>

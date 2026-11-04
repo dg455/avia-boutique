@@ -22,7 +22,8 @@ const fns = {
 };
 
 export function start(port = 8788) {
-  const cookie = "shop_gate=" + createHash("sha256").update("shop-gate|" + (process.env.SHOP_ACCESS_CODE || "Avia2026")).digest("hex");
+  const code = process.env.SHOP_ACCESS_CODE || "Avia2026";
+  const cookie = "shop_gate=" + createHash("sha256").update("shop-gate|" + code).digest("hex") + "; shop_admin=" + createHash("sha256").update("shop-gate|admin|" + (process.env.ADMIN_CODE || code)).digest("hex");
   const server = createServer(async (req, res) => {
     const url = new URL(req.url, "http://localhost");
     const shortCode = url.pathname.match(/^\/c\/([A-Za-z0-9]+)$/);
