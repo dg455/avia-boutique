@@ -58,6 +58,33 @@ export async function sendTestMail({ env, to }) {
   }
 }
 
+// E-mail du code de vérification de l'adresse (avant paiement). brand : { name, cardName, operator, supportPhone }.
+export async function sendCodeMail({ env, to, code, brand }) {
+  const cfg = deliveryConfig(env || process.env);
+  if (!cfg.email) return { ok: false, error: "E-mail non configuré" };
+  const b = brand || { name: "AVIA", cardName: "Carte carburant AVIA", operator: "SoShop.Club", supportPhone: "" };
+  const subject = `${code} est votre code — ${b.cardName}`;
+  const text = `Votre code de vérification : ${code}
+
+Recopiez-le dans la boutique pour confirmer votre adresse e-mail. Il est valable 10 minutes.
+
+Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail.
+
+${b.operator ? `${b.name} by ${b.operator}` : b.name}`;
+  const html = `<div style="font-family:Helvetica,Arial,sans-serif;font-size:16px;line-height:1.5;color:#141B2D;max-width:560px">
+<p>Votre code de vérification :</p>
+<p style="font-size:34px;font-weight:700;letter-spacing:6px;font-family:Menlo,Consolas,monospace;margin:8px 0 16px">${code}</p>
+<p>Recopiez-le dans la boutique pour confirmer votre adresse e-mail. Il est valable 10 minutes.</p>
+<p style="font-size:14px;color:#5a6478">Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail.<br>${b.operator ? `${b.name} by ${b.operator}` : b.name}</p>
+</div>`;
+  try {
+    const t = await mailer(cfg);
+    const fromStr = cfg.from.name ? `"${cfg.from.name.replace(/"/g, "")}" <${cfg.from.email}>` : cfg.from.email;
+    const info = await t.sendMail({ from: fromStr, replyTo: cfg.replyTo ? cfg.replyTo.email : undefined, to, subject, text, html });
+    return { ok: true, id: info.messageId || null, preview: cfg.smtp.host === "json" ? info.message : undefined };
+  } catch (err) { return { ok: false, error: String(err && err.message) }; }
+}
+
 function parseAddress(s) {
   const m = String(s).match(/^\s*(?:"?([^"<]*)"?\s*)?<?([^<>\s]+@[^<>\s]+)>?\s*$/);
   if (!m) return null;

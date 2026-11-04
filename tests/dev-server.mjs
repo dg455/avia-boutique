@@ -14,7 +14,9 @@ const fns = {
   "/api/stripe-webhook": () => import("../netlify/functions/stripe-webhook.mjs"),
   "/api/issue-worker": () => import("../netlify/functions/issue-worker-background.mjs"),
   "/api/order-status": () => import("../netlify/functions/order-status.mjs"),
-  "/api/resend-link": () => import("../netlify/functions/resend-link.mjs")
+  "/api/resend-link": () => import("../netlify/functions/resend-link.mjs"),
+  "/api/email-code/send": () => import("../netlify/functions/email-code.mjs"),
+  "/api/email-code/verify": () => import("../netlify/functions/email-code.mjs")
 };
 
 export function start(port = 8788) {

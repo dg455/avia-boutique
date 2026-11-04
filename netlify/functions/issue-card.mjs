@@ -8,6 +8,7 @@
 //   - le produit doit exister au catalogue serveur (le client ne fixe pas le prix).
 
 import { gateOk, json } from "./lib/http.mjs";
+import { verificationRequired, checkToken } from "./lib/verify.mjs";
 import { validateOrder, catalogProduct, issuingMode } from "./lib/issue.mjs";
 import { getOrder, saveOrder } from "./lib/orders.mjs";
 import { internalToken } from "./lib/stripe.mjs";
@@ -24,6 +25,9 @@ export default async (request) => {
   if (errors.length) return json(400, { ok: false, code: "INVALID", error: "Informations incomplètes : " + errors.join(", ") });
   const product = catalogProduct(body);
   if (!product) return json(400, { ok: false, code: "INVALID", error: "Produit inconnu." });
+  if (verificationRequired(process.env) && !checkToken(body.emailToken, body.email)) {
+    return json(403, { ok: false, code: "EMAIL_UNVERIFIED", error: "Adresse e-mail non vérifiée." });
+  }
 
   if (issuingMode() === "real" && process.env.ALLOW_SIMULATED_PAYMENT !== "true") {
     return json(402, { ok: false, code: "PAYMENT_REQUIRED", error: "Le paiement n'a pas été confirmé." });

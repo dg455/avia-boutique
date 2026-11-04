@@ -155,6 +155,7 @@
       case "#/": show("screen-home"); break;
       case "#/email": $("#f-email").value = state.email || ""; show("screen-email"); break;
       case "#/known": if (!state.person) { location.replace("#/email"); break; } paintKnown(); show("screen-known"); break;
+      case "#/code": if (!state.email) { location.replace("#/email"); break; } $("#code-email").textContent = state.email; $("#f-code").value = ""; setError($("#f-code"), false); show("screen-code"); setTimeout(() => $("#f-code").focus(), 50); break;
       case "#/details": fillDetails(); show("screen-details"); break;
       case "#/review": if (guardPerson()) { paintReview(q.get("cancel") === "1"); show("screen-review"); } break;
       case "#/pay": if (guardPerson()) { paintPay(); show("screen-pay"); } break;
@@ -193,8 +194,46 @@
     setError(inp, false);
     state.email = v; save();
     const k = known()[v];
-    if (k) { state.person = k; save(); go("#/known"); } else { go("#/details"); }
+    if (k) { state.person = k; save(); }
+    state.verifyReturn = k ? "#/known" : "#/details"; save();
+    if (needVerify === false || (state.emailVerified === v && state.emailToken)) { go(state.verifyReturn); return; }
+    requestCode(v, true);
   });
+
+  // ----- Code de vérification de l'adresse -----
+  // Le serveur n'exige le code que si l'envoi d'e-mail est configuré ; sinon il répond required:false et on continue.
+  let codeBusy = false;
+  async function requestCode(email, thenGo) {
+    if (codeBusy) return; codeBusy = true;
+    const btn = $("#btn-code-resend"); btn.disabled = true;
+    let j = null;
+    try { const r = await fetch("/api/email-code/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) }); j = await r.json().catch(() => ({})); j.status = r.status; } catch (e) { j = null; }
+    codeBusy = false;
+    if (j && j.ok && j.required === false) { needVerify = false; state.emailToken = null; save(); if (thenGo) go(state.verifyReturn || "#/details"); return; }
+    if (j && j.ok) { needVerify = true; if (thenGo) go("#/code"); else { btn.textContent = "code renvoyé"; } cooldown(60); return; }
+    if (j && j.code === "TOO_SOON") { if (thenGo) go("#/code"); cooldown(j.retryIn || 60); return; }
+    btn.disabled = false;
+    showError((j && j.error) || "L'e-mail de vérification n'a pas pu partir.", "Vérifiez l'adresse, puis réessayez dans une minute. Rien n'a été débité.");
+  }
+  function cooldown(sec) {
+    const btn = $("#btn-code-resend"); let left = sec; btn.disabled = true;
+    const tick = () => { if (left <= 0) { btn.textContent = "renvoyez le code"; btn.disabled = false; return; } btn.textContent = `renvoyez le code (${left} s)`; left -= 1; setTimeout(tick, 1000); };
+    tick();
+  }
+  $("#btn-code-resend").addEventListener("click", () => { if (state.email) requestCode(state.email, false); });
+  $("#form-code").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const inp = $("#f-code"); const code = inp.value.replace(/\D/g, "");
+    if (code.length !== 6) { $("#code-error").textContent = "Entrez les 6 chiffres du code."; setError(inp, true); inp.focus(); return; }
+    const btn = $("#btn-code-ok"); btn.disabled = true;
+    let j = null;
+    try { const r = await fetch("/api/email-code/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: state.email, code }) }); j = await r.json().catch(() => ({})); } catch (err) { j = null; }
+    btn.disabled = false;
+    if (j && j.ok && j.required === false) { needVerify = false; go(state.verifyReturn || "#/details"); return; }
+    if (j && j.ok && j.token) { setError(inp, false); state.emailToken = j.token; state.emailVerified = state.email; save(); go(state.verifyReturn || "#/details"); return; }
+    $("#code-error").textContent = (j && j.error) || "Code refusé."; setError(inp, true); inp.select();
+  });
+  $("#f-code").addEventListener("input", () => { const inp = $("#f-code"); inp.value = inp.value.replace(/\D/g, "").slice(0, 6); setError(inp, false); if (inp.value.length === 6) $("#form-code").requestSubmit(); });
 
   // ----- Client reconnu -----
   function paintKnown() {
@@ -252,9 +291,9 @@
 
   // ----- Paiement -----
   // Le prestataire effectif est décidé côté serveur (variables d'environnement) ; config.js sert de repli.
-  let serverProvider = null;
+  let serverProvider = null, needVerify = null; // needVerify : null tant que /api/health n'a pas répondu (on demande alors au serveur)
   function provider() { return serverProvider || CFG.payment.provider || "simulated"; }
-  fetch("/api/health", { cache: "no-store" }).then((r) => r.ok ? r.json() : null).then((h) => { if (h && h.payment) serverProvider = h.payment; }).catch(() => {});
+  fetch("/api/health", { cache: "no-store" }).then((r) => r.ok ? r.json() : null).then((h) => { if (h && h.payment) serverProvider = h.payment; if (h) needVerify = !!h.emailVerification; }).catch(() => {});
 
   function paintPay() { $("#pay-demo-notice").hidden = provider() !== "simulated"; }
   $("#form-pay").addEventListener("submit", (e) => {
@@ -267,11 +306,12 @@
     state.orderId = uuid(); save(); // nouvelle commande à chaque passage en caisse
     const btn = $("#btn-pay"); btn.disabled = true;
     try {
-      const body = { orderId: state.orderId, product: product(), email: state.email, person: state.person };
+      const body = { orderId: state.orderId, product: product(), email: state.email, person: state.person, emailToken: state.emailToken || undefined };
       const r = await fetch("/api/payment-session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const j = await r.json().catch(() => ({}));
       if (r.ok && j.redirectUrl) { remember(state.email, state.person); location.href = j.redirectUrl; return; }
       btn.disabled = false;
+      if (r.status === 403 && j.code === "EMAIL_UNVERIFIED") { state.verifyReturn = "#/review"; save(); requestCode(state.email, true); return; }
       showError(j.error || "Le paiement n'est pas disponible pour le moment.", "Rien n'a été débité. Réessayez dans quelques minutes.");
     } catch (err) { btn.disabled = false; showError("Le paiement n'est pas disponible pour le moment.", "Vérifiez votre connexion, puis réessayez."); }
   }
@@ -289,9 +329,10 @@
 
     if (!fromPayment) {
       try {
-        const body = { orderId: state.orderId, product: product(), email: state.email, person: state.person, payment: state.payment || { method: "simulated" } };
+        const body = { orderId: state.orderId, product: product(), email: state.email, person: state.person, payment: state.payment || { method: "simulated" }, emailToken: state.emailToken || undefined };
         const r = await fetch("/api/issue-card", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
         const j = await r.json().catch(() => ({}));
+        if (r.status === 403 && j.code === "EMAIL_UNVERIFIED") { creating = false; state.verifyReturn = "#/review"; save(); requestCode(state.email, true); return; }
         if (!r.ok || !j.ok) return fail(j);
       } catch (err) {
         creating = false;
@@ -384,6 +425,7 @@
   function paintDevice(device, url) {
     $$(".device-tab").forEach((b) => b.classList.toggle("is-active", b.dataset.device === device));
     ["android", "ios", "other"].forEach((d) => { $("#pane-" + d).hidden = d !== device; });
+    if (device === "android") paintWalletSteps();
     if (device === "other" && url && url !== "#" && window.qrcode) {
       try {
         // Le QR code mène à cette page de guidage sur le téléphone, pas directement au lien (qui ne s'ouvre qu'une fois).
@@ -398,6 +440,27 @@
     w.textContent = w.dataset.base + (w.dataset.sent ? "" : (device === "other" ? " Il n'est affiché qu'ici : copiez-le ou photographiez le QR code avant de quitter la page." : " Il n'est affiché qu'ici : copiez-le avant de quitter la page."));
   }
   $$(".device-tab").forEach((b) => b.addEventListener("click", () => paintDevice(b.dataset.device, $("#link-text").textContent)));
+  // Android : étape 1 (préparer Wallet) avant étape 2 (ouvrir le lien, à usage unique).
+  // Le bouton de l'étape 1 est un lien « intent » : le téléphone ouvre Google Wallet s'il est installé, sinon sa fiche Play Store.
+  const WALLET_PKG = "com.google.android.apps.walletnfcrel";
+  const WALLET_STORE = "https://play.google.com/store/apps/details?id=" + WALLET_PKG;
+  const walletReady = () => { try { return sessionStorage.getItem("wallet_ready") === "1"; } catch (e) { return false; } };
+  function paintWalletSteps() {
+    const ready = walletReady();
+    const s1 = $("#wallet-step-1"), s2 = $("#wallet-step-2"), open = $("#btn-android-open");
+    s1.classList.toggle("is-done", ready); s2.classList.toggle("is-locked", !ready);
+    open.setAttribute("aria-disabled", ready ? "false" : "true"); open.tabIndex = ready ? 0 : -1;
+    $("#wallet-step-2-hint").hidden = ready;
+    const a = $("#btn-wallet-android");
+    if (detectDevice() === "android") {
+      a.href = "intent://pay.google.com/gp/w/home#Intent;scheme=https;package=" + WALLET_PKG + ";S.browser_fallback_url=" + encodeURIComponent(WALLET_STORE) + ";end";
+      a.removeAttribute("target");
+    } else { a.href = WALLET_STORE; a.target = "_blank"; }
+  }
+  function setWalletReady() { try { sessionStorage.setItem("wallet_ready", "1"); } catch (e) {} paintWalletSteps(); }
+  $("#btn-wallet-android").addEventListener("click", () => { setTimeout(setWalletReady, 800); }); // après le départ vers Wallet / le Play Store
+  $("#btn-wallet-ready").addEventListener("click", setWalletReady);
+  $("#btn-android-open").addEventListener("click", (e) => { if (!walletReady()) { e.preventDefault(); $("#btn-wallet-android").focus(); } });
   $("#btn-copy-link").addEventListener("click", async () => {
     const url = $("#link-text").textContent, btn = $("#btn-copy-link");
     try { await navigator.clipboard.writeText(url); btn.textContent = "Lien copié"; }

@@ -84,6 +84,26 @@
       </form>
     </section>
 
+    <!-- 2a. Code de vérification de l'adresse -->
+    <section class="screen" id="screen-code" data-step="2">
+      <button class="back" data-go="#/email">‹ Retour</button>
+      <div class="steps" aria-hidden="true"></div>
+      <div class="steps-label">Étape 2 sur 4 : vos coordonnées</div>
+      <h1>Confirmez votre adresse</h1>
+      <p class="lead">Nous venons d'envoyer un code à 6 chiffres à <strong id="code-email"></strong>. Votre carte vous sera envoyée à cette adresse : c'est pour ça qu'on la vérifie.</p>
+      <form id="form-code" novalidate>
+        <div class="field">
+          <label for="f-code">Code reçu par e-mail</label>
+          <input class="input input-code" type="text" id="f-code" name="code" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="6" placeholder="······" required>
+          <div class="field-error" id="code-error">Code incorrect.</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" type="submit" id="btn-code-ok">Vérifier</button>
+        </div>
+      </form>
+      <p class="small muted">Rien reçu ? Regardez vos indésirables, puis <button class="linklike" type="button" id="btn-code-resend">renvoyez le code</button> ou <button class="linklike" type="button" data-go="#/email">corrigez l'adresse</button>.</p>
+    </section>
+
     <!-- 2b. Client reconnu -->
     <section class="screen" id="screen-known" data-step="2">
       <button class="back" data-go="#/email">‹ Retour</button>
@@ -232,15 +252,16 @@
         <button class="device-tab" type="button" data-device="other" role="tab">Ordinateur</button>
       </div>
 
-      <!-- Android : Google Wallet -->
+      <!-- Android : Google Wallet, en deux temps. Le lien d'activation ne s'ouvre qu'une fois : on prépare Wallet AVANT de l'ouvrir. -->
       <div class="device-pane" id="pane-android" hidden>
         <ol class="wallet-steps">
-          <li><span class="n">1</span><span><strong>Préparez Google Wallet</strong> (une minute, une seule fois) : l'application doit être installée, connectée à votre compte Google, et votre téléphone doit avoir un verrouillage d'écran (code, empreinte ou visage).
-            <span class="btn-row btn-row-tight"><a class="btn btn-ink btn-sm" id="btn-wallet-android" href="https://play.google.com/store/apps/details?id=com.google.android.apps.walletnfcrel" target="_blank" rel="noopener">Ouvrir ou installer Google Wallet</a></span></span></li>
-          <li><span class="n">2</span><span><strong>Ouvrez votre carte dans Chrome</strong>, pas depuis WhatsApp ou Messenger : acceptez les conditions, la carte s'affiche.
-            <span class="btn-row btn-row-tight"><a class="btn btn-primary btn-sm js-open-card" href="#" target="_blank" rel="noopener">Ouvrir ma carte</a></span></span></li>
-          <li><span class="n">3</span><span>Touchez <strong>« Add to Google Wallet »</strong> et laissez Google terminer : la carte apparaît dans Wallet.</span></li>
-          <li><span class="n">4</span><span>En station, approchez votre téléphone du terminal, comme avec une carte bancaire.</span></li>
+          <li id="wallet-step-1"><span class="n">1</span><span><strong>Préparez Google Wallet</strong> (une fois pour toutes). Touchez le bouton : si Wallet est installé, il s'ouvre — vérifiez qu'il est connecté à votre compte Google et que votre téléphone a un verrouillage d'écran ; sinon, installez-le, ouvrez-le une première fois, puis revenez ici.
+            <span class="btn-row btn-row-tight"><a class="btn btn-ink btn-sm" id="btn-wallet-android" href="https://play.google.com/store/apps/details?id=com.google.android.apps.walletnfcrel" target="_blank" rel="noopener">Ouvrir ou installer Google Wallet</a>
+            <button class="linklike" type="button" id="btn-wallet-ready">Wallet est déjà prêt</button></span></span></li>
+          <li id="wallet-step-2" class="is-locked"><span class="n">2</span><span><strong>Ajoutez votre carte</strong> : votre carte s'ouvre dans Chrome, acceptez les conditions, puis touchez <strong>« Add to Google Wallet »</strong> et laissez Google terminer.
+            <span class="btn-row btn-row-tight"><a class="btn btn-primary btn-sm js-open-card" id="btn-android-open" href="#" target="_blank" rel="noopener" aria-disabled="true">Ajouter ma carte à Google Wallet</a></span>
+            <span class="small muted" id="wallet-step-2-hint">Faites d'abord l'étape 1 : une fois votre carte ouverte, ce lien ne se rouvre pas.</span></span></li>
+          <li><span class="n">3</span><span>En station, approchez votre téléphone du terminal, comme avec une carte bancaire.</span></li>
         </ol>
       </div>
 

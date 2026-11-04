@@ -261,3 +261,11 @@ textarea.input { min-height: 110px; resize: vertical; }
   h1 { font-size: 34px; }
   main { padding-top: 36px; }
 }
+
+/* Code de vérification e-mail */
+.input-code { font-family: var(--font-num); font-size: 28px; letter-spacing: 10px; text-align: center; }
+/* Google Wallet en deux temps */
+.wallet-steps li.is-locked > span:last-child { opacity: .55; }
+.wallet-steps li.is-locked .btn { pointer-events: none; filter: grayscale(.6); }
+.wallet-steps li.is-done .n::after { content: " ✓"; font-size: 14px; }
+#btn-wallet-ready { margin-left: 6px; font-size: 14px; }

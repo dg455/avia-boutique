@@ -4,7 +4,7 @@
 // Une commande passe par : pending (session de paiement créée) → issuing (paiement autorisé, émission en cours)
 // → issued (carte créée et chargée, paiement capturé) ou failed (rien débité).
 
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -52,6 +52,25 @@ export async function getOrderByCode(code) {
   if (store) map = await store.get(key, { type: "json" });
   else { try { map = JSON.parse(await readFile(join(LOCAL_DIR, key + ".json"), "utf8")); } catch { map = null; } }
   return map && map.orderId ? getOrder(map.orderId) : null;
+}
+
+// Enregistrements techniques (codes de vérification e-mail, etc.) : même magasin, clé préfixée.
+function recordFile(key) { return join(LOCAL_DIR, String(key).replace(/[^A-Za-z0-9._-]/g, "_") + ".json"); }
+export async function getRecord(key) {
+  const store = await blobStore();
+  if (store) return (await store.get(key, { type: "json" })) || null;
+  try { return JSON.parse(await readFile(recordFile(key), "utf8")); } catch { return null; }
+}
+export async function setRecord(key, value) {
+  const store = await blobStore();
+  if (store) { await store.setJSON(key, value); return; }
+  await mkdir(LOCAL_DIR, { recursive: true });
+  await writeFile(recordFile(key), JSON.stringify(value));
+}
+export async function deleteRecord(key) {
+  const store = await blobStore();
+  if (store) { try { await store.delete(key); } catch { /* déjà absent */ } return; }
+  try { await rm(recordFile(key), { force: true }); } catch { /* déjà absent */ }
 }
 
 // Ce que la boutique peut afficher au client (jamais les données complètes).

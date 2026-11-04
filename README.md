@@ -21,11 +21,13 @@ netlify/functions/
   stripe-webhook.mjs          POST /api/stripe-webhook : paiement autorisé → déclenche l'émission
   issue-worker-background.mjs POST /api/issue-worker : émission en arrière-plan, puis capture ou annulation du paiement
   order-status.mjs            GET  /api/order-status : avancement d'une commande (suivi par la boutique)
+  email-code.mjs              POST /api/email-code/send, /verify : vérification de l'adresse e-mail par code avant paiement
   health.mjs                  GET  /api/health : état de la configuration (sans secret)
   lib/middleware.mjs          client du middleware (création client + carte, chargement)
   lib/issue.mjs               émission (simulation ou réel), catalogue serveur, validation
   lib/orders.mjs              commandes (Netlify Blobs en production, fichier local en test)
   lib/stripe.mjs              client Stripe, prestataire effectif, jeton interne
+  lib/verify.mjs              code de vérification e-mail (6 chiffres, 10 min, 5 essais) et jeton d'adresse vérifiée (24 h)
 netlify/edge-functions/
   gate.ts               porte d'entrée : tout le site derrière un code d'accès
 tests/                  test local des fonctions, serveur de développement
@@ -107,3 +109,11 @@ La plateforme émettrice n'envoie rien au porteur : le lien d'activation est ren
 - Le message contient un **lien court** `https://<boutique>/c/REF` (REF = référence de commande) qui mène à la page de guidage (Android / iPhone) portant le lien d'activation ; le lien d'activation lui-même ne s'ouvre qu'une fois. `SHOP_PUBLIC_ORIGIN` fixe l'origine de ces liens courts si elle diffère de celle des commandes.
 - `/api/health` indique `delivery.email` et `delivery.sms` ; `/api/mail-check` (porte d'entrée ou `?code=`) envoie un e-mail de test à une adresse soshop.club (`?to=`, défaut damien@soshop.club) sans émettre de carte.
 - `POST /api/resend-link { orderId }` renvoie l'e-mail à l'adresse de la commande (bouton « renvoyez l'e-mail » sous le lien ; 3 renvois au plus, une minute entre deux).
+
+## Vérification de l'adresse e-mail (code avant paiement)
+
+Dès que l'envoi d'e-mail est configuré, la boutique envoie un code à 6 chiffres à l'adresse saisie et ne laisse pas payer tant qu'il n'est pas recopié (une faute de frappe produirait une carte payée que personne ne reçoit, et l'adresse part chez l'émetteur). Code valable 10 minutes, 5 essais ; 1 envoi par minute et 5 par heure par adresse. L'adresse vérifiée donne un jeton signé (24 h) que `/api/payment-session` et `/api/issue-card` exigent pour cette adresse (`403 EMAIL_UNVERIFIED` sinon). `EMAIL_VERIFICATION=false` pour couper. `/api/health` indique `emailVerification`.
+
+## Google Wallet (Android) en deux temps
+
+Le lien d'activation ne s'ouvre qu'une fois : la page « carte prête » demande d'abord de préparer Google Wallet (bouton « intent » Android : ouvre Wallet s'il est installé, sinon sa fiche Play Store), puis seulement déverrouille « Ajouter ma carte à Google Wallet », qui ouvre le lien dans Chrome où se trouve le bouton de la plateforme. L'état « Wallet prêt » est mémorisé sur l'appareil (session).
