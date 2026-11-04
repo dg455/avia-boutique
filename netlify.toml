@@ -20,3 +20,17 @@
   for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=604800"
+
+# Adresse publique : avia.soshop.club. L'adresse technique *.netlify.app ne doit plus apparaître :
+# tout ce qui y arrive est renvoyé (301) vers le domaine, sauf les appels techniques (/api/*, webhook Stripe inscrit sur l'ancienne adresse).
+[[redirects]]
+  from = "https://avia-boutique.netlify.app/api/*"
+  to = "/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "https://avia-boutique.netlify.app/*"
+  to = "https://avia.soshop.club/:splat"
+  status = 301
+  force = true
