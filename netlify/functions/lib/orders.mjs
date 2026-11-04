@@ -79,12 +79,9 @@ export async function deleteRecord(key) {
 export async function listKeys(prefix = "") {
   const store = await blobStore();
   if (store) {
-    const keys = []; let cursor;
-    do {
-      const page = await store.list({ prefix, cursor, paginate: true });
-      for (const b of page.blobs || []) keys.push(b.key);
-      cursor = page.cursor;
-    } while (cursor);
+    // store.list({ paginate: true }) renvoie un flux de pages (AsyncIterable), pas une page : on l'itère.
+    const keys = [];
+    for await (const page of store.list({ prefix, paginate: true })) for (const b of page.blobs || []) keys.push(b.key);
     return keys;
   }
   let names = []; try { names = await readdir(LOCAL_DIR); } catch { return []; }
